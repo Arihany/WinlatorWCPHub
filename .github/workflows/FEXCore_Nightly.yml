@@ -248,7 +248,7 @@ jobs:
           grep -Fq 'CMAKE_EXE_LINKER_FLAGS_INIT' "$T" || { echo "::error::Missing EXE INIT"; exit 1; }
       
           perl -0777 -i -pe 's/\Q-static-libgcc \E//g; s/\Q-static-libstdc++ \E//g' "$T"
-          perl -0777 -i -pe 's/(^|\s)-lucrtbase(\s|$)/ /g' "$T"
+          # keep -lucrtbase for ARM64/ARM64EC; removing it breaks CRT imports (e.g. _assert)
 
           if grep -Eq -- '-static-lib(gcc|stdc\+\+)([[:space:]]|$)' "$T"; then
             echo "::error::GCC-only purge failed"; exit 1
