@@ -8,10 +8,6 @@ on:
         type: boolean
         default: false
         description: "true= self-hosted, false= github runner"
-      sanitize_llvm_mingw_flags:
-        type: boolean
-        default: true
-        description: "Sanitize llvm-mingw flags"
       revert_p_environ:
         type: boolean
         default: true
@@ -189,7 +185,6 @@ jobs:
       STABLE: ${{ needs.guard.outputs.stable }}
       SHORTSHA: ${{ needs.guard.outputs.shortsha }}
       DATE: ${{ needs.guard.outputs.date }}
-      DO_SANITIZE: ${{ (github.event_name != 'workflow_dispatch') || inputs.sanitize_llvm_mingw_flags }}
       DO_PENVIRON: ${{ (github.event_name != 'workflow_dispatch') || inputs.revert_p_environ }}
       DO_EC_HOTFIX: ${{ (github.event_name != 'workflow_dispatch') || inputs.arm64ec_module_hotfix }}
     steps:
@@ -236,27 +231,6 @@ jobs:
         run: |
           git -C src config user.name "FEXCore Nightly Builder"
           git -C src config user.email "builder@users.noreply.github.com"
-
-      - name: Sanitize llvm-mingw flags (keep -static, drop GCC-only & -lucrtbase)
-        if: ${{ env.DO_SANITIZE == 'true' }}
-        run: |
-          set -Eeuo pipefail
-          T="${GITHUB_WORKSPACE}/src/Data/CMake/toolchain_mingw.cmake"
-          [[ -f "$T" ]] || { echo "::error::toolchain file not found: $T"; exit 1; }
-      
-          grep -Fq 'CMAKE_SHARED_LINKER_FLAGS_INIT' "$T" || { echo "::error::Missing SHARED INIT"; exit 1; }
-          grep -Fq 'CMAKE_EXE_LINKER_FLAGS_INIT' "$T" || { echo "::error::Missing EXE INIT"; exit 1; }
-      
-          perl -0777 -i -pe 's/\Q-static-libgcc \E//g; s/\Q-static-libstdc++ \E//g' "$T"
-          # keep -lucrtbase for ARM64/ARM64EC; removing it breaks CRT imports (e.g. _assert)
-
-          if grep -Eq -- '-static-lib(gcc|stdc\+\+)([[:space:]]|$)' "$T"; then
-            echo "::error::GCC-only purge failed"; exit 1
-          fi
-          
-          if grep -Eq -- '(^|[[:space:]])-lucrtbase([[:space:]]|$)' "$T"; then
-            echo "::error::-lucrtbase still present"; exit 1
-          fi
       
       - name: Revert __p__environ import back to local definition (if present)
         if: ${{ env.DO_PENVIRON == 'true' }}
@@ -327,9 +301,11 @@ jobs:
             -DENABLE_LTO=False \
             -DMINGW_TRIPLE=arm64ec-w64-mingw32 \
             -DBUILD_TESTING=False \
-            -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
+            -DENABLE_FEX_ALLOCATOR=True \
             -DCMAKE_C_FLAGS="${CFLAGS:+$CFLAGS }-D_CRTIMP= -D_SECIMP=" \
             -DCMAKE_CXX_FLAGS="${CXXFLAGS:+$CXXFLAGS }-D_CRTIMP= -D_SECIMP=" \
+            -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
+            -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
           NINJA_STATUS="" ninja
           DESTDIR="$STAGE_ARM64EC" ninja install
@@ -352,9 +328,11 @@ jobs:
             -DENABLE_LTO=False \
             -DMINGW_TRIPLE=aarch64-w64-mingw32 \
             -DBUILD_TESTING=False \
-            -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
+            -DENABLE_FEX_ALLOCATOR=True \
             -DCMAKE_C_FLAGS="${CFLAGS:+$CFLAGS }-D_CRTIMP= -D_SECIMP=" \
             -DCMAKE_CXX_FLAGS="${CXXFLAGS:+$CXXFLAGS }-D_CRTIMP= -D_SECIMP=" \
+            -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
+            -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
           NINJA_STATUS="" ninja
           DESTDIR="$STAGE_AARCH64" ninja install
