@@ -8,10 +8,6 @@ on:
         type: boolean
         default: false
         description: "true= self-hosted, false= github runner"
-      revert_p_environ:
-        type: boolean
-        default: true
-        description: "Revert __p__environ import back to local definition"
       arm64ec_module_hotfix:
         type: boolean
         default: true
@@ -185,7 +181,6 @@ jobs:
       STABLE: ${{ needs.guard.outputs.stable }}
       SHORTSHA: ${{ needs.guard.outputs.shortsha }}
       DATE: ${{ needs.guard.outputs.date }}
-      DO_PENVIRON: ${{ (github.event_name != 'workflow_dispatch') || inputs.revert_p_environ }}
       DO_EC_HOTFIX: ${{ (github.event_name != 'workflow_dispatch') || inputs.arm64ec_module_hotfix }}
     steps:
       - name: Install host tooling (lean set; no cache)
@@ -231,20 +226,6 @@ jobs:
         run: |
           git -C src config user.name "FEXCore Nightly Builder"
           git -C src config user.email "builder@users.noreply.github.com"
-      
-      - name: Revert __p__environ import back to local definition (if present)
-        if: ${{ env.DO_PENVIRON == 'true' }}
-        run: |
-          set -Eeuo pipefail
-          F="${GITHUB_WORKSPACE}/src/Source/Windows/Common/CRT/Misc.cpp"
-          [[ -f "$F" ]] || { echo "::error::File not found: $F"; exit 1; }
-
-          if grep -Fxq 'extern "C" __declspec(dllimport) char*** __cdecl __p__environ(void);' "$F"; then
-            perl -0777 -i -pe 's{^\Qextern "C" __declspec(dllimport) char*** __cdecl __p__environ(void);\E$}{char*** __p__environ() {\n  return &EnvArray;\n}}m' "$F"
-            grep -Fxq 'char*** __p__environ() {' "$F" || { echo "::error::Restore failed"; exit 1; }
-          else
-            echo "::notice::__p__environ already local; nothing to revert"
-          fi
 
       - name: ARM64EC Module.S x23→x12 hotfix (strict, no-heredoc)
         if: ${{ env.DO_EC_HOTFIX == 'true' }}
@@ -302,8 +283,6 @@ jobs:
             -DMINGW_TRIPLE=arm64ec-w64-mingw32 \
             -DBUILD_TESTING=False \
             -DENABLE_FEX_ALLOCATOR=True \
-            -DCMAKE_C_FLAGS="${CFLAGS:+$CFLAGS }-D_CRTIMP= -D_SECIMP=" \
-            -DCMAKE_CXX_FLAGS="${CXXFLAGS:+$CXXFLAGS }-D_CRTIMP= -D_SECIMP=" \
             -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
@@ -329,8 +308,6 @@ jobs:
             -DMINGW_TRIPLE=aarch64-w64-mingw32 \
             -DBUILD_TESTING=False \
             -DENABLE_FEX_ALLOCATOR=True \
-            -DCMAKE_C_FLAGS="${CFLAGS:+$CFLAGS }-D_CRTIMP= -D_SECIMP=" \
-            -DCMAKE_CXX_FLAGS="${CXXFLAGS:+$CXXFLAGS }-D_CRTIMP= -D_SECIMP=" \
             -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
