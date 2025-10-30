@@ -279,7 +279,7 @@ jobs:
             "type": "Box64",
             "versionName": "${DEV}-${SHORT}",
             "versionCode": ${DATECODE},
-            "description": "Box64-Bionic-Nightly ${DEV}-${SHORT} Automated Build (Upstream: ptitSeb)",
+            "description": "Box64-Bionic-Nightly ${DEV}-${SHORT} Automated Build (Built by Ari's Winlator WCP Hub. Upstream: ptitSeb)",
             "files": [
               { "source": "box64", "target": "\${bindir}/box64" }
             ]
