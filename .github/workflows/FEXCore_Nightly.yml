@@ -227,24 +227,20 @@ jobs:
           git -C src config user.name "FEXCore Nightly Builder"
           git -C src config user.email "builder@users.noreply.github.com"
 
+      - name: Patch NeedDisabledSVE.py (null-safe on non-ARM hosts)
+        run: |
+          set -Eeuo pipefail
+          F="${GITHUB_WORKSPACE}/src/Scripts/NeedDisabledSVE.py"
+          [[ -f "$F" ]] || { echo "::error::File not found: $F"; exit 1; }
+          perl -0777 -i -pe 's/^([ \t]*)if "sve" in Features:\s*$/$1if Features is None:\n$1    Features = []\n$1elif isinstance(Features, str):\n$1    Features = Features.split()\n$1if "sve" in Features:\n/m' "$F"
+
       - name: Inject CMake hook to disable rpmalloc asserts
         run: |
           set -Eeuo pipefail
           mkdir -p "${GITHUB_WORKSPACE}/ci"
           INJ="${GITHUB_WORKSPACE}/ci/inject_rpmalloc_noassert.cmake"
           cat > "${INJ}" <<'CMK'
-          # injected by CI to keep FEX no-CRT model without editing submodules
-          # Require CMake >= 3.19 for DEFER (GH runners are newer).
-          if (COMMAND cmake_language)
-            foreach(t rpmalloc rpmalloc-static rpmalloc_static)
-              # If target exists now, apply; otherwise defer until after it's created.
-              if (TARGET ${t})
-                target_compile_definitions(${t} PRIVATE RPMALLOC_DISABLE_ASSERTS=1 NDEBUG=1)
-              else()
-                cmake_language(DEFER CALL target_compile_definitions ${t} PRIVATE RPMALLOC_DISABLE_ASSERTS=1 NDEBUG=1)
-              endif()
-            endforeach()
-          endif()
+          add_compile_definitions(RPMALLOC_DISABLE_ASSERTS=1)
           CMK
 
       - name: ARM64EC Module.S x23→x12 hotfix (strict, no-heredoc)
