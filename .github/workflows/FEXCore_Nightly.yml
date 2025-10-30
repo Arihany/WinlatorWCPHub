@@ -227,6 +227,26 @@ jobs:
           git -C src config user.name "FEXCore Nightly Builder"
           git -C src config user.email "builder@users.noreply.github.com"
 
+      - name: Inject CMake hook to disable rpmalloc asserts
+        run: |
+          set -Eeuo pipefail
+          mkdir -p "${GITHUB_WORKSPACE}/ci"
+          INJ="${GITHUB_WORKSPACE}/ci/inject_rpmalloc_noassert.cmake"
+          cat > "${INJ}" <<'CMK'
+          # injected by CI to keep FEX no-CRT model without editing submodules
+          # Require CMake >= 3.19 for DEFER (GH runners are newer).
+          if (COMMAND cmake_language)
+            foreach(t rpmalloc rpmalloc-static rpmalloc_static)
+              # If target exists now, apply; otherwise defer until after it's created.
+              if (TARGET ${t})
+                target_compile_definitions(${t} PRIVATE RPMALLOC_DISABLE_ASSERTS=1 NDEBUG=1)
+              else()
+                cmake_language(DEFER CALL target_compile_definitions ${t} PRIVATE RPMALLOC_DISABLE_ASSERTS=1 NDEBUG=1)
+              endif()
+            endforeach()
+          endif()
+          CMK
+
       - name: ARM64EC Module.S x23→x12 hotfix (strict, no-heredoc)
         if: ${{ env.DO_EC_HOTFIX == 'true' }}
         run: |
@@ -283,8 +303,7 @@ jobs:
             -DMINGW_TRIPLE=arm64ec-w64-mingw32 \
             -DBUILD_TESTING=False \
             -DENABLE_FEX_ALLOCATOR=True \
-            -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
-            -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
+            -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES="${GITHUB_WORKSPACE}/ci/inject_rpmalloc_noassert.cmake" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
           NINJA_STATUS="" ninja
           DESTDIR="$STAGE_ARM64EC" ninja install
@@ -308,8 +327,7 @@ jobs:
             -DMINGW_TRIPLE=aarch64-w64-mingw32 \
             -DBUILD_TESTING=False \
             -DENABLE_FEX_ALLOCATOR=True \
-            -DCMAKE_SHARED_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
-            -DCMAKE_EXE_LINKER_FLAGS="${LDFLAGS:+$LDFLAGS } -lucrtbase" \
+            -DCMAKE_PROJECT_TOP_LEVEL_INCLUDES="${GITHUB_WORKSPACE}/ci/inject_rpmalloc_noassert.cmake" \
             -DCMAKE_INSTALL_PREFIX=/usr ..
           NINJA_STATUS="" ninja
           DESTDIR="$STAGE_AARCH64" ninja install
