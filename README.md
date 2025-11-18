@@ -14,8 +14,9 @@
 > <br>
 >  
 > - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support
+> - The official Winlator and its glibc-based forks are also sufficiently stable and powerful. Try experimenting with different combinations.
 > 
-> | Type | |
+> | Type | 📝 |
 > |:-:|-|
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly intergates the latest upstream code while remaining close to vanilla |
