@@ -143,10 +143,10 @@
 ---
 <br><br>
 
-<h3>Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX, etc.) retain their original upstream licenses.
-WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credit belong to the original authors.</h3>
+<h4>Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX, etc.) retain their original upstream licenses.
+WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credit belong to the original authors.</h4>
 
-<h3>
+<h4>
 
 FEX [Billy Laws](https://github.com/bylaws)<br>
 Box64 [ptitSeb](https://github.com/ptitSeb)<br>
@@ -155,5 +155,5 @@ DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
 DXVK-GPLAsync Patch [Ph42oN](https://gitlab.com/Ph42oN)<br>
 VKD3D [Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
 
-</h3>
+</h4>
 
