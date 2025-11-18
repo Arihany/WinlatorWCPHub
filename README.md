@@ -13,7 +13,7 @@
 >  <summary><b>What exactly is Winlator-Bionic?</b></summary>
 > <br>
 >  
-> - Winlator Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support.
+> - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support.
 > 
 > | Type | |
 > |:-:|-|
@@ -37,10 +37,10 @@
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
-| FEXCore | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> 2511|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
-| Box64-Bionic | Stable · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY)| <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
-| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||
+| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> 2511|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
+| Box64-Bionic | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY) | <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
 | WowBox64 |  |  | |
+<!--| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) &nbsp; [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||-->
 
 <details>
   <summary>💡Useful info</summary>
@@ -52,7 +52,7 @@
 | **Box64** | Very flexible and particularly strong for older or finicky software when its dynarec settings are tuned for the host CPU. |
 | **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64. |
 
-- Starting with build ```2509```, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
+- Starting with build `2509`, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
 - Basic ```Box64``` settings for unity games: ```STRONGMEM=1+``` ```CALLRET=0``` ```WEAKBARRIER=0~1``` (```WEAKBARRIER``` can mitigate the performance hit from ```STRONGMEM```, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to ```0```)
 
 </details>
@@ -63,11 +63,10 @@
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
-| [**DXVK**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
-| [**DXVK-GPLAsync**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
-| [**DXVK-Sarek**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**Async**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**Mali fix**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
-|||
-| [**VKD3D-Proton**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
+| [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
+| [**`DXVK-GPLAsync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
+| [**`DXVK-Sarek`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**`Async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**`Mali-fix`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
+| [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
   <summary>💡Useful info</summary>
@@ -75,19 +74,14 @@
 
 | Type | 📝 |
 |:-:|-|
-| **Sarek**    | Backports for older Vulkan. Keeps DXVK usable on Vulkan 1.1/1.2 hardware, with practical tweaks for legacy GPUs. |
-| **GPLAsync** | DXVK + Async shader compilation + GPL cache to cut visible stutter during compilation. |
-| **ARM64EC**  | Designed to run with ❗FEXCore❗ to minimize translation and reduce overhead. |
+| **Sarek**    | Backports for older Vulkan. Keeps DXVK usable on Vulkan 1.1 hardware, with practical tweaks for legacy GPUs |
+| **GPLAsync** | DXVK + GPL cache + Async shader compilation to cut visible stutter during compilation |
+| **ARM64EC**  | Designed to run with ```FEXCore``` to minimize translation and reduce overhead |
+| **Mali-fix** | Fixes issues on Mali hardware. Since the latest wrapper includes the same fixes, it is not needed for recent Bionic builds |
+
+- In mobile environments, using the very latest version can actually lead to worse performance (For now, anyway)
 
 </details>
-
----
-
-### 🍷 Wine
-
-| 📦 | 🏷️ | 📜 |
-|:-:|:-:|:-:|
-| | |
 
 ---
 
@@ -99,9 +93,9 @@
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite, Mesa turnip driver for a6xx - a7xx |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite, Mesa turnip driver for a6xx - a7xx |
-| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite |
+| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
+| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
+| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx) |
 
 
 <details>
@@ -110,8 +104,8 @@
   
 | Type | 📝 |
 |:-:|-|
-| **Qualcomm driver**    | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches. |
-| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. |
+| **Qualcomm driver**    | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches |
+| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices |
 
 </details>
 
@@ -124,19 +118,18 @@
 | [**Visual C++ x64**](https://aka.ms/vs/17/release/vc_redist.x64.exe) | 2015–2022 Redistributable |
 | [**Visual C++ x86**](https://aka.ms/vs/17/release/vc_redist.x86.exe) | 2015–2022 Redistributable |
 | [**Visual C++ ARM64**](https://aka.ms/vs/17/release/vc_redist.arm64.exe) | 2015–2022 Redistributable |
-| [**Wine-Mono**](https://github.com/wine-mono/wine-mono/releases) | .NET runtime for Wine (*.msi) |
-| [**Wine-Gecko**](https://dl.winehq.org/wine/wine-gecko/) | HTML engine for Wine (*.msi) |
-| [**XNA Framework**](https://download.microsoft.com/download/a/c/2/ac2c903b-e6e8-42c2-9fd7-bebac362a930/xnafx40_redist.msi) | Old indie games runtime |
-| [**DirectX (June 2010)**](https://download.microsoft.com/download/8/4/a/84a35bf1-dafe-4ae8-82af-ad2ae20b6b14/directx_Jun2010_redist.exe) | Install ONLY if missing DLL (d3dx9_43.dll...) |
-| [**PhysX Legacy**](https://www.nvidia.com/content/DriverDownload-March2009/confirmation.php?url=/Windows/9.13.0604/PhysX-9.13.0604-SystemSoftware-Legacy.msi&lang=us&type=Other) | Install ONLY if a old game requests PhysX DLL |
+| [**Wine-Mono (*.msi)**](https://github.com/wine-mono/wine-mono/releases) | .NET runtime for Wine (**Install only when the built-in tool is not working**) |
+| [**Wine-Gecko (*.msi)**](https://dl.winehq.org/wine/wine-gecko/) | HTML engine for Wine (**Install only when the built-in tool is not working**) |
+| [**DirectX (June 2010)**](https://download.microsoft.com/download/8/4/a/84a35bf1-dafe-4ae8-82af-ad2ae20b6b14/directx_Jun2010_redist.exe) | **Install only if missing Legacy DirectX DLL** |
+| [**PhysX Legacy**](https://www.nvidia.com/content/DriverDownload-March2009/confirmation.php?url=/Windows/9.13.0604/PhysX-9.13.0604-SystemSoftware-Legacy.msi&lang=us&type=Other) | **Install only if a old game requests PhysX DLL** |
+| [**XNA Framework**](https://download.microsoft.com/download/a/c/2/ac2c903b-e6e8-42c2-9fd7-bebac362a930/xnafx40_redist.msi) | xna40. Old indie games runtime |
 
 <details>
   <summary>💡Useful info</summary>
 <br>
 
-- If VC++ errors persist in an ARM64EC container, install ```Visual C++ ARM64```
-- If older VC++ is needed, try an [**AIO package**](https://github.com/abbodi1406/vcredist). <br>
-- May require the official [**.NET Framework**](https://dotnet.microsoft.com/ko-kr/download/dotnet-framework) instead of Mono.
+- Install only the minimum necessary
+- If older VC++ is needed, try an [**AIO package**](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/) <br>
 
 </details>
 
@@ -148,20 +141,19 @@
 ---
 <br><br>
 
-<h4 align="center">All credit to the original creators.</h4><p align="center">
+<h4 align="center">All credit to the original creators</h4><p align="center">
 
 <h3 align="center">
 
-[brunodev85](https://github.com/brunodev85)<br>
-[bylaws](https://github.com/bylaws)<br>
-[doitsujin](https://github.com/doitsujin)<br>
-[Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
-[K11MCH1](https://github.com/K11MCH1)<br>
-[MESA](https://mesa3d.org/)<br>
-[Ph42oN](https://gitlab.com/Ph42oN)<br>
-[ptitSeb](https://github.com/ptitSeb)<br>
-[pythonlover02](https://github.com/pythonlover02)<br>
-[zoerakk](https://github.com/zoerakk)
+FEX [Billy Laws](https://github.com/bylaws)<br>
+Box64 [ptitSeb](https://github.com/ptitSeb)<br>
+DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
+DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
+DXVK-GPLAsync Patch [Ph42oN](https://gitlab.com/Ph42oN)<br>
+VKD3D [Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
+
+
+
 
 </h3><p align="center">
 
