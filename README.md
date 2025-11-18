@@ -143,7 +143,8 @@
 ---
 <br><br>
 
-<h4 align="center">All credit to the original creators</h4><p align="center">
+<h4 align="center">Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX, etc.) retain their original upstream licenses.
+WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credit belong to the original authors.</h4><p align="center">
 
 <h3 align="center">
 
