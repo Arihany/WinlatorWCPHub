@@ -1,7 +1,4 @@
 name: FEXCore
-# bylaws LLVM_MINGW 20250920
-# 2508+
-# ARM64EC disallowed registers hotfix
 
 on:
   workflow_dispatch:
@@ -45,7 +42,7 @@ jobs:
       - name: Install jq, curl (minimal)
         run: |
           sudo apt-get -yqq update
-          sudo apt-get -yqq install --no-install-recommends jq curl ca-certificates util-linux
+          sudo apt-get -yqq install --no-install-recommends jq curl ca-certificates
 
       - name: Collect already-published versions
         id: have
@@ -116,18 +113,14 @@ jobs:
       contents: write
     env:
       FEX_REPO: ${{ vars.FEX_REPO || 'FEX-Emu/FEX' }}
-      TOOLCHAIN_DIR: /opt/llvm-mingw
-      RELEASE_TAG: FEXCore
-      GH_TOKEN: ${{ github.token }}
       LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
-      DO_EC_HOTFIX: ${{ (github.event_name != 'workflow_dispatch') || inputs.arm64ec_module_hotfix }}
     steps:
       - name: Install host tooling (lean set; no cache)
         run: |
           sudo apt-get -yqq update
           sudo apt-get -yqq install --no-install-recommends \
             curl xz-utils jq ca-certificates \
-            git ninja-build cmake pkg-config util-linux \
+            git ninja-build cmake pkg-config \
             build-essential python3 zstd gh perl dos2unix
 
       - name: Download pinned llvm-mingw
@@ -156,11 +149,6 @@ jobs:
           set -Eeuo pipefail
           git clone --recurse-submodules https://github.com/${FEX_REPO}.git src
           cd src && git fetch --tags --force
-
-      - name: Configure git identity
-        run: |
-          git -C src config user.name "FEXCore Builder"
-          git -C src config user.email "builder@users.noreply.github.com"
 
       - name: Build (ARM64EC + AArch64)
         env:
