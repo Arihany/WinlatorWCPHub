@@ -43,9 +43,9 @@
 <!--| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) &nbsp; [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||-->
 
 <details>
-  <summary>💡Useful info</summary>
+<summary>💡Useful info</summary>
 <br>
-  
+
 | Type | 📝 |
 |:-:|-|
 | **FEXCore** | Works especially well with newer games and can reach very high performance on an ARM64 system that uses an Arm64EC or Proton style environment. |
@@ -53,7 +53,7 @@
 | **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64. |
 
 - Starting with build `2509`, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
-- Basic ```Box64``` settings for unity games: ```STRONGMEM=1+``` ```CALLRET=0``` ```WEAKBARRIER=0~1``` (```WEAKBARRIER``` can mitigate the performance hit from ```STRONGMEM```, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to ```0```)
+- Basic `Box64` settings for unity games: `STRONGMEM=1+` `CALLRET=0` `WEAKBARRIER=0~1` (`WEAKBARRIER` can mitigate the performance hit from `STRONGMEM`, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to `0`)
 
 </details>
 
@@ -63,10 +63,10 @@
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
-| [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
-| [**`DXVK-GPLAsync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
-| [**`DXVK-Sarek`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**`Async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**`Mali-fix`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
-| [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
+| [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
+| [**`DXVK-GPLAsync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
+| [**`DXVK-Sarek`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) [**`Async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) [**`Mali-fix`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
+| [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
   <summary>💡Useful info</summary>
@@ -80,6 +80,7 @@
 | **Mali-fix** | Fixes issues on Mali hardware. Since the latest wrapper includes the same fixes, it is not needed for recent Bionic builds |
 
 - In mobile environments, using the very latest version can actually lead to worse performance (For now, anyway)
+- The LowLatency version is not included since it actually degrades performance
 
 </details>
 
