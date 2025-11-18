@@ -13,13 +13,13 @@
 >  <summary><b>What exactly is Winlator-Bionic?</b></summary>
 > <br>
 >  
-> - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support.
+> - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support
 > 
 > | Type | |
 > |:-:|-|
-> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
-> | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly intergates the latest upstream code while remaining close to vanilla. |
-> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Rapidly intergates the latest upstream code, combines CMod features with additional QOL improvements. |
+> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support |
+> | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly intergates the latest upstream code while remaining close to vanilla |
+> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Rapidly intergates the latest upstream code, combines CMod features with additional QOL improvements |
 >
 > </details>
 > 
@@ -27,7 +27,7 @@
 >  <summary><b>WCP?</b></summary>
 > <br>
 >
-> - WCP is a custom component bundle for the Winlator ecosystem, originating from an older glibc fork. It is essentially a tar.zst archive with the .wcp extension. Even if WCP installation isn't supported, you can simply unpack it and use its contents anywhere if you know the basics.
+> - WCP is a custom component bundle for the Winlator ecosystem, originating from an older glibc fork. It is essentially a tar.zst archive with the .wcp extension. Even if WCP installation isn't supported, you can simply unpack it and use its contents anywhere if you know the basics
 >
 > </details>
 
