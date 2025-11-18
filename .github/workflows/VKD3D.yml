@@ -132,9 +132,10 @@ jobs:
           . "$VENV/bin/activate"
           python -m pip install --upgrade pip
           pip install "meson==1.2.3" "ninja==1.11.1"
-          deactivate
+
+          export PATH="$VENV/bin:${PATH}"
           echo "PATH=$VENV/bin:${PATH}" >> "$GITHUB_ENV"
-          # sanity check
+
           meson --version
           ninja --version
 
