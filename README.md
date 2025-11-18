@@ -13,10 +13,10 @@
 >  <summary><b>What exactly is Winlator-Bionic?</b></summary>
 > <br>
 >  
-> - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support
+> - Winlator-Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support.
 > - The official Winlator and its glibc-based forks are also sufficiently stable and powerful. Try experimenting with different combinations.
 > 
-> | Type | 📝 |
+> | Bionic builds | 📝 |
 > |:-:|-|
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly intergates the latest upstream code while remaining close to vanilla |
@@ -28,7 +28,7 @@
 >  <summary><b>WCP?</b></summary>
 > <br>
 >
-> - WCP is a custom component bundle for the Winlator ecosystem, originating from an older glibc fork. It is essentially a tar.zst archive with the .wcp extension. Even if WCP installation isn't supported, you can simply unpack it and use its contents anywhere if you know the basics
+> - WCP is a custom component bundle for the Winlator ecosystem, originating from an older glibc fork. It is essentially a tar.zst archive with the .wcp extension. Even if WCP installation isn't supported, you can simply unpack it and use its contents anywhere if you know the basics.
 >
 > </details>
 
@@ -49,12 +49,12 @@
 
 | Type | 📝 |
 |:-:|-|
-| **FEXCore** | Works especially well with newer games and can reach very high performance on an ARM64 system that uses an Arm64EC or Proton style environment. |
-| **Box64** | Very flexible and particularly strong for older or finicky software when its dynarec settings are tuned for the host CPU. |
-| **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64. |
+| **FEXCore** | Works especially well with newer games and can reach very high performance on an ARM64 system that uses an Arm64EC or Proton style environment |
+| **Box64** | Very flexible and particularly strong for older or finicky software when its dynarec settings are tuned for the host CPU |
+| **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64 |
 
 - Starting with build `2509`, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
-- Basic `Box64` settings for unity games: `STRONGMEM=1+` `CALLRET=0` `WEAKBARRIER=0~1` (`WEAKBARRIER` can mitigate the performance hit from `STRONGMEM`, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to `0`)
+- Basic `Box64` settings for unity games: `STRONGMEM=1+` `CALLRET=0` `WEAKBARRIER=0~1`. (`WEAKBARRIER` can mitigate the performance hit from `STRONGMEM`, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to `0`)
 
 </details>
 
@@ -80,8 +80,8 @@
 | **ARM64EC**  | Designed to run with ```FEXCore``` to minimize translation and reduce overhead |
 | **Mali-fix** | Fixes issues on Mali hardware. Since the latest wrapper includes the same fixes, it is not needed for recent Bionic builds |
 
-- In mobile environments, using the very latest version can actually lead to worse performance (For now, anyway)
-- The LowLatency version is not included since it actually degrades performance
+- In mobile environments, using the very latest version can actually lead to worse performance. (For now, anyway)
+- The LowLatency version is not included since it actually degrades performance.
 
 </details>
 
@@ -130,8 +130,8 @@
   <summary>💡Useful info</summary>
 <br>
 
-- Install only the minimum necessary
-- If older VC++ is needed, try an [**AIO package**](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/) <br>
+- Install only the minimum necessary.
+- If older VC++ is needed, try an [**AIO package**](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/). <br>
 
 </details>
 
