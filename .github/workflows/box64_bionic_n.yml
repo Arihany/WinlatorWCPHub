@@ -1,5 +1,4 @@
-name: Box64-Bionic Nightly
-#Revert Fix -Wformat on Android/Clang
+name: Box64 Bionic (Nightly)
 
 on:
   workflow_dispatch:
@@ -28,21 +27,17 @@ jobs:
     runs-on: ${{ fromJSON( (format('{0}', inputs.use_self_hosted) == 'true' && '["self-hosted"]') || '["ubuntu-latest"]' ) }}
     timeout-minutes: 5
     outputs:
-      build:        ${{ steps.decide.outputs.build }}
-      sha:          ${{ steps.upstream.outputs.sha }}
-      short:        ${{ steps.upstream.outputs.short }}
-      datecode:     ${{ steps.date.outputs.datecode }}
-      stable:       ${{ steps.ver.outputs.stable }}
-      stable_tag:   ${{ steps.ver.outputs.stable_tag }}
-      develop:      ${{ steps.ver.outputs.develop }}
-      version_name: ${{ steps.compose.outputs.version_name }}
-      version_code: ${{ steps.date.outputs.datecode }}
-      filename:     ${{ steps.compose.outputs.filename }}
+      build:      ${{ steps.decide.outputs.build }}
+      sha:        ${{ steps.upstream.outputs.sha }}
+      short:      ${{ steps.upstream.outputs.short }}
+      datecode:   ${{ steps.date.outputs.datecode }}
+      develop:    ${{ steps.ver.outputs.develop }}
+      filename:   ${{ steps.compose.outputs.filename }}
     env:
       GH_TOKEN: ${{ github.token }}
-      RELEASE_TAG: BOX64-BIONIC-NIGHTLY
       OWNER: ptitSeb
       REPO: box64
+      RELEASE_TAG: BOX64-BIONIC-NIGHTLY
     steps:
       - name: Install jq, curl (minimal)
         run: |
@@ -70,7 +65,7 @@ jobs:
           echo "short=${short}" >> "$GITHUB_OUTPUT"
           echo "Upstream ${default_branch} @ ${short}"
 
-      - name: Resolve latest stable tag and derive develop (even→odd)
+      - name: Resolve latest stable tag and derive develop
         id: ver
         run: |
           set -Eeuo pipefail
@@ -101,12 +96,10 @@ jobs:
           DEV_PATCH=$((PAT + 1))
           DEV="${MAJ}.${MIN}.${DEV_PATCH}"
 
-          echo "stable=${stable}"       >> "$GITHUB_OUTPUT"
-          echo "stable_tag=${stable_tag}" >> "$GITHUB_OUTPUT"
           echo "develop=${DEV}"         >> "$GITHUB_OUTPUT"
           echo "Stable=${stable_tag}, Develop=${DEV}"
 
-      - name: Decide date code (UTC)
+      - name: Decide date code
         id: date
         run: echo "datecode=$(date -u +%y%m%d)" >> "$GITHUB_OUTPUT"
 
@@ -118,9 +111,7 @@ jobs:
           DATECODE: ${{ steps.date.outputs.datecode }}
         run: |
           set -Eeuo pipefail
-          VERSION_NAME="${DEV}-${SHORT}"
           FILENAME="box64-bionic-${DEV}-${DATECODE}-${SHORT}.wcp"
-          echo "version_name=${VERSION_NAME}" >> "$GITHUB_OUTPUT"
           echo "filename=${FILENAME}"         >> "$GITHUB_OUTPUT"
           echo "Composed: ${FILENAME}"
 
@@ -201,7 +192,7 @@ jobs:
           path: src
           fetch-depth: 1
 
-      - name: Prepare Android NDK ${{ env.NDK_VERSION }} (idempotent)
+      - name: Prepare Android NDK ${{ env.NDK_VERSION }}
         run: |
           set -Eeuo pipefail
           NDK_BASE="android-ndk-${NDK_VERSION}"
@@ -222,7 +213,6 @@ jobs:
 
           echo "NDK=$NDK_DIR" >> $GITHUB_ENV
           echo "BOX64_COMPILER=$NDK_DIR/toolchains/llvm/prebuilt/linux-x86_64/bin/aarch64-linux-android${API_LEVEL}-clang" >> $GITHUB_ENV
-          echo "BOX64_PLATFORM_MACRO=-DANDROID=1 -DARM_DYNAREC=1 -DBAD_SIGNAL=1" >> $GITHUB_ENV
 
       - name: Configure
         run: |
@@ -241,10 +231,10 @@ jobs:
             -DCI=0 \
             -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
 
-      - name: Build (parallel)
+      - name: Build
         run: cmake --build src/build -j"$(nproc)"
 
-      - name: Strip binary (safe)
+      - name: Strip binary
         run: |
           set -Eeuo pipefail
           BIN="src/build/box64"
@@ -257,7 +247,7 @@ jobs:
           fi
           file "$BIN"
 
-      - name: Verify ELF (Bionic traits)
+      - name: Verify ELF
         run: |
           set -Eeuo pipefail
           echo "---- INTERP ----"
@@ -267,7 +257,7 @@ jobs:
           echo "---- ANDROID NOTE ----"
           readelf -nW src/build/box64 | sed -n '/.note.android.ident/,/Displaying/p'
 
-      - name: Package WCP (develop semver + date + short)
+      - name: Package WCP
         run: |
           set -Eeuo pipefail
           mkdir -p Box64_WCP artifacts
@@ -294,7 +284,7 @@ jobs:
           NOTES_FILE: ${{ runner.temp }}/RELEASE_NOTES.md
         run: |
           set -Eeuo pipefail
-          printf '🌙 Automated BOX64 Bionic nightly builds (rolling)\n\n' > "$NOTES_FILE"
+          printf '🌙 Automated Box64 Bionic Nightly builds (rolling)\n\n' > "$NOTES_FILE"
           echo "Current: ${DEV}-${DATECODE}(YYMMDD)-[${SHORT}](https://github.com/${OWNER}/${REPO}/commit/${SHA})" >> "$NOTES_FILE"
 
           if ! gh release view "${RELEASE_TAG}" --repo "${REPO_FULL}" >/dev/null 2>&1; then
