@@ -47,8 +47,8 @@
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
-| FEXCore | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> 2511|<a href="https://github.com/FEX-Emu/FEX">🔗</a> |
-| Box64-bionic | Stable · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY)| <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64">🔗</a> |
+| FEXCore | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> 2511|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
+| Box64-bionic | Stable · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY)| <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
 | Box64-glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||
 | WowBox64 |  |  | |
 
@@ -62,7 +62,6 @@
 | **Box64** | Power user friendly. Extensive dynarec tuning on top of a fast JIT and native-library bridges. |
 
 - With the ```2509``` update, Unity game performance has improved on ```FEX``` as well.
-- Unity games are generally more stable when run with ```Box64```.
 - Basic ```Box64``` settings for unity games: ```STRONGMEM=1+``` ```CALLRET=0``` ```WEAKBARRIER=0~1```
 - ```WEAKBARRIER``` can mitigate the performance hit from ```STRONGMEM```, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to ```0```.
 
@@ -76,10 +75,9 @@
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
-| [**DXVK**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk">🔗</a> |
-| [**DXVK-GPLAsync**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync">🔗</a> |
-| [**DXVK-Sarek**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**Async**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**Mali fix**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek">🔗</a> |
-| DXVK-GPLAsync-LowLatency | | |
+| [**DXVK**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
+| [**DXVK-GPLAsync**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
+| [**DXVK-Sarek**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**Async**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**Mali fix**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
 
 <details>
   <summary>💡Useful info</summary>
@@ -104,7 +102,7 @@
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
-| [**VKD3D-Proton**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton">🔗</a> |
+| [**VKD3D-Proton**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
   <summary>💡Useful info</summary>
