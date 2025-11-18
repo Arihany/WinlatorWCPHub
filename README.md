@@ -10,24 +10,16 @@
 
 > [!TIP]
 > <details>
->  <summary><b>Winlator?</b></summary>
+>  <summary><b>What exactly is Winlator-Bionic?</b></summary>
 > <br>
 >  
-> - Winlator is an Android application started by brunodev85 that lets you run Windows (x86_64) applications using Wine and Box64/FEX.
+> - Winlator Bionic refers to a community fork line originating from Pipetto-crypto’s [code](https://github.com/Pipetto-crypto/winlator/tree/winlator_bionic), which replaces or augments the stock setup with Ubuntu rootfs (Bionic/Focal), modular WCP components, and optional Arm64EC containers powered by FEXCore, allowing aggressive performance experiments that the upstream project does not officially support.
 > 
-> | Type | 🧠 |
-> |:-:|:-:|
-> | [**Official Winlator**](https://github.com/brunodev85/winlator) | Glibc |
-> | [**Winlator-Frost**](https://github.com/MrPhryaNikFrosty/Winlator-Frost) | Glibc |
-> | [**Winlator-AMod**](https://github.com/afeimod/winlator-mod) | Glibc |
-> | [**Winlator-CMod**](https://github.com/coffincolors/winlator) | Bionic |
->
-> | 🧠 | 📝 |
+> | Type | |
 > |:-:|-|
-> | glibc  | Official default. Wide compatibility, stable with solid performance. (Box64 Only) |
-> | bionic | Android native. Faster, potential issues on low-spec devices. (FEX + Box64) |
-> - Although longjunyu2’s unofficial Glibc fork remains functional, it’s best to avoid using it.
-> - Discontinued or alpha builds are not covered.
+> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
+> | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly intergates the latest upstream code while remaining close to vanilla. |
+> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Rapidly intergates the latest upstream code, combines CMod features with additional QOL improvements. |
 >
 > </details>
 > 
@@ -35,21 +27,19 @@
 >  <summary><b>WCP?</b></summary>
 > <br>
 >
-> - WCP is a custom component bundle for the Winlator ecosystem, originating from the old glibc fork and currently used mainly with ```CMod```. It’s essentially a tar.zst archive with a .wcp extension. Even if WCP installs aren’t supported, you can simply unpack it and use the contents anywhere if you know the basics.
+> - WCP is a custom component bundle for the Winlator ecosystem, originating from an older glibc fork. It is essentially a tar.zst archive with the .wcp extension. Even if WCP installation isn't supported, you can simply unpack it and use its contents anywhere if you know the basics.
 >
 > </details>
 
 ---
 
 ### 🌀 FEXCore & Box64
-> [!NOTE]
-> Files here may change on a whim.
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
 | FEXCore | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> 2511|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
-| Box64-bionic | Stable · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY)| <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
-| Box64-glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||
+| Box64-Bionic | Stable · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY)| <!--box64--> 0.3.8 · 0.3.9| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
+| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) · [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||
 | WowBox64 |  |  | |
 
 <details>
@@ -58,26 +48,26 @@
   
 | Type | 📝 |
 |:-:|-|
-| **FEXCore**  | Handles both 32-bit and 64-bit. Pairing it with ARM64EC-built graphics runtimes like DXVK/VKD3D can reduce x64 translation boundaries and further lower overhead. |
-| **Box64** | Power user friendly. Extensive dynarec tuning on top of a fast JIT and native-library bridges. |
+| **FEXCore** | Works especially well with newer games and can reach very high performance on an ARM64 system that uses an Arm64EC or Proton style environment. |
+| **Box64** | Very flexible and particularly strong for older or finicky software when its dynarec settings are tuned for the host CPU. |
+| **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64. |
 
-- With the ```2509``` update, Unity game performance has improved on ```FEX``` as well.
-- Basic ```Box64``` settings for unity games: ```STRONGMEM=1+``` ```CALLRET=0``` ```WEAKBARRIER=0~1```
-- ```WEAKBARRIER``` can mitigate the performance hit from ```STRONGMEM```, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to ```0```.
+- Starting with build ```2509```, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
+- Basic ```Box64``` settings for unity games: ```STRONGMEM=1+``` ```CALLRET=0``` ```WEAKBARRIER=0~1``` (```WEAKBARRIER``` can mitigate the performance hit from ```STRONGMEM```, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to ```0```)
 
 </details>
 
 ---
 
-### ⚡ DXVK (DX8-11)
-> [!NOTE]
-> ```v2.5``` is **NOT** recommended.
+### ⚡ DXVK (DX8-11) & VKD3D (DX12)
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
 | [**DXVK**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
 | [**DXVK-GPLAsync**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
 | [**DXVK-Sarek**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK) · [**Async**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) · [**Mali fix**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
+|||
+| [**VKD3D-Proton**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
   <summary>💡Useful info</summary>
@@ -87,34 +77,7 @@
 |:-:|-|
 | **Sarek**    | Backports for older Vulkan. Keeps DXVK usable on Vulkan 1.1/1.2 hardware, with practical tweaks for legacy GPUs. |
 | **GPLAsync** | DXVK + Async shader compilation + GPL cache to cut visible stutter during compilation. |
-| **ARM64EC**  | Designed to run with ❗FEX❗ to minimize x64→ARM translation and reduce overhead. |
-
-- As a general pick, go with ```DXVK-Sarek``` or ```DXVK 2.4.1```
-- Recent ```GPLAsync``` builds may increase stuttering in certain games.
-- In GPU-bound scenarios, ```ARM64EC``` has little to no impact on average FPS.
-- If the game has a built-in frame limiter, use that. In some cases, ```DXVK_FRAME_RATE``` can introduce stutter.
-
-</details>
-
----
-
-### 🧬 VKD3D-Proton (DX12)
-
-| 📦 | 🏷️ | 📜 |
-|-|:-:|:-:|
-| [**VKD3D-Proton**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) · [**ARM64EC**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
-
-<details>
-  <summary>💡Useful info</summary>
-<br>
-  
-| Type | 📝 |
-|:-:|-|
-| **ARM64EC** | Designed to run with ❗FEX❗ to minimize x64→ARM translation and reduce overhead. |
-
-- If it isn’t required, **leave the ```VKD3D feature level``` at its default**. Forcing a higher feature level can trigger different code paths and extra shader compilation, which may lead to stutter.
-- You can limit the frame rate using: ```DXVK_FRAME_RATE``` or ```VKD3D_FRAME_RATE```
-- If the game has a built-in frame limiter, use that. In some cases, ```..._FRAME_RATE``` can introduce stutter.
+| **ARM64EC**  | Designed to run with ❗FEXCore❗ to minimize translation and reduce overhead. |
 
 </details>
 
@@ -124,7 +87,7 @@
 
 | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|
-| ||
+| | |
 
 ---
 
@@ -148,7 +111,7 @@
 | Type | 📝 |
 |:-:|-|
 | **Qualcomm driver**    | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches. |
-| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. Results vary by version and SoC. |
+| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. |
 
 </details>
 
