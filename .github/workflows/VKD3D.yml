@@ -128,16 +128,16 @@ jobs:
         run: |
           set -Eeuo pipefail
           VENV="${GITHUB_WORKSPACE}/.venv"
+
           python3 -m venv "$VENV"
-          . "$VENV/bin/activate"
-          python -m pip install --upgrade pip
-          pip install "meson==1.2.3" "ninja==1.11.1"
 
-          export PATH="$VENV/bin:${PATH}"
-          echo "PATH=$VENV/bin:${PATH}" >> "$GITHUB_ENV"
+          "$VENV/bin/python" -m pip install --upgrade pip
+          "$VENV/bin/pip" install "meson==1.2.3" "ninja==1.11.1"
 
-          meson --version
-          ninja --version
+          echo "$VENV/bin" >> "$GITHUB_PATH"
+
+          "$VENV/bin/meson" --version
+          "$VENV/bin/ninja" --version
 
       - name: Download pinned llvm-mingw (UCRT)
         id: llvm
