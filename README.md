@@ -141,12 +141,12 @@
 [**Winlator 101**](https://github.com/K11MCH1/Winlator101)
 
 ---
+<br>
+<h3 align="center"> Credits </h3>
+<h4 align="center">
+Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX, etc.) retain their original upstream licenses.
+WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credit belong to the original authors.
 <br><br>
-
-<h4>Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX, etc.) retain their original upstream licenses.<br>
-WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credit belong to the original authors.</h4>
-
-<h4>
 
 FEX [Billy Laws](https://github.com/bylaws)<br>
 Box64 [ptitSeb](https://github.com/ptitSeb)<br>
