@@ -41,7 +41,7 @@ jobs:
             "sarek":    "DXVK-SAREK",
             "gplasync": "DXVK-GPLASYNC",
             "vkd3d":    "VKD3D-PROTON",
-            "box64":    "BOX64-BIONIC-NIGHTLY"
+            "box64":    "BOX64-BIONIC"
           }
           EOF
 
@@ -105,18 +105,21 @@ jobs:
               # Box64 special fallback logic for suspicious inputs could go here if needed
             fi
 
-            # Box64 Special Formatting (Stable · Nightly)
-            final_ver="$ver"
-            if [ "$key" = "box64" ]; then
-              # Extract numeric base (e.g. 0.3.2 from 0.3.2-rc1)
-              base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
-              if [ -n "$base" ]; then
-                maj=${base%%.*}; rest=${base#*.}; min=${rest%%.*}; pat=${rest#*.}
-                if [ "$pat" -gt 0 ]; then
-                  final_ver="${maj}.${min}.$((pat-1)) · ${maj}.${min}.${pat}"
-                fi
-              fi
-            fi
+           # Box64 Special Formatting (Stable · Next patch as "nightly")
+           final_ver="$ver"
+           if [ "$key" = "box64" ]; then
+             # Extract numeric base from stable version (e.g. 0.3.8 from 0.3.8 / 0.3.8-rc1)
+             base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
+             if [ -n "$base" ]; then
+               maj=${base%%.*}
+               rest=${base#*.}
+               min=${rest%%.*}
+               pat=${rest#*.}
+               # Stable: maj.min.pat, "nightly": maj.min.(pat+1)
+               next=$((pat+1))
+               final_ver="${maj}.${min}.${pat} · ${maj}.${min}.${next}"
+             fi
+           fi
 
             # Update JSON
             jq --arg k "$key" --arg v "$final_ver" '.[$k]=$v' new.json > new.tmp && mv new.tmp new.json
