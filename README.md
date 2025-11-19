@@ -53,6 +53,8 @@
 | **Box64** | Renowned for speed and flexibility. Excellent for older titles or optimizing performance on specific hardware through extensive Dynarec customization. |
 | **WowBox64** | An in-process CPU emulation helper that enables native ARM64 Wine to run x86_64 binaries. |
 
+---
+
 <h3>For Unity</h3>
 
 | Variables | 🏷️ | Box64 |
