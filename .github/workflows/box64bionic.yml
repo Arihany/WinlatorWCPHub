@@ -27,7 +27,7 @@ env:
   GH_TOKEN: ${{ github.token }}
   UPSTREAM_SLUG: ptitSeb/box64
   REL_TAG_STABLE: BOX64-BIONIC
-  REL_TAG_WEEKLY: BOX64-BIONIC-NIGHTLY
+  REL_TAG_WEEKLY: BOX64-BIONIC-WEEKLY
   NDK_VER: r26b
   API_LEVEL: 31
 
@@ -146,6 +146,8 @@ jobs:
 
       - name: Setup NDK & Build
         run: |
+          rm -rf build
+          
           curl -fsSL "https://dl.google.com/android/repository/android-ndk-${NDK_VER}-linux.zip" -o ndk.zip
           unzip -q ndk.zip && rm ndk.zip
           export NDK_HOME="$PWD/android-ndk-${NDK_VER}"
@@ -180,7 +182,7 @@ jobs:
 
           tar --zstd --owner=0 --group=0 --sort=name -cf "artifacts/${FILENAME}" -C pkg profile.json box64
 
-          echo -e "- Target: aarch64 / Android ${API_LEVEL}\n- ${NOTES_STR}" > release_notes.md
+          echo -e "- Target: AArch64/Android ${API_LEVEL}\n- ${NOTES_STR}" > release_notes.md
           
           echo "Updating Release: $REL_TAG"
           if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
