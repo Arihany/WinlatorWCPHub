@@ -14,7 +14,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "Stable tag (e.g. v0.3.2). Empty = latest"
+        description: "Stable tag (e.g. v0.3.8). Empty = latest"
   schedule:
     - cron: "0 17 * * *"  # daily stable check
     - cron: "0 18 * * 0"  # weekly build
@@ -191,7 +191,7 @@ jobs:
             "type": "WOWBox64",
             "versionName": "${VER_NAME}",
             "versionCode": ${VER_CODE},
-            "description": "WowBox64 Helper (Upstream: ptitSeb)",
+            "description": "Built on the Winlator WCP Hub (Upstream: ptitSeb)",
             "files": [{ "source": "system32/wowbox64.dll", "target": "\${system32}/wowbox64.dll" }]
           }
           EOF
