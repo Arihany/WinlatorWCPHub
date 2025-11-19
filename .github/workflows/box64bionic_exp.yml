@@ -149,7 +149,7 @@ jobs:
           cat > release_notes.md <<EOF
           - **Tier 1**: SD 8 Gen 1-3, Dimensity 9000-9300, Exynos 2200/2400 (ARMv9+LSE)
           - **Tier 2**: SD 8 Elite, Dimensity 9400 (ARMv9.2+SVE2+RCPC)
-          - *Experimental build with aggressive optimization flags.*
+          - *Experimental build with aggressive optimization flags. (Just for fun)*
           EOF
 
           # Create or Edit Release
