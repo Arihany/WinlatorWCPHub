@@ -98,7 +98,7 @@ jobs:
               fi
               ver="$prev"
             else
-              ver="$(printf '%s' "$line" | perl -ne 'print $1 if /^\s*Current:\s*([0-9]+(?:\.[0-9]+){0,2}(?:[-+][0-9A-Za-z().-]+)*)/')"
+              ver="$(printf '%s' "$line" | perl -ne 'print $1 if /^\s*Current:\s*([0-9]+(?:\.[0-9]+){0,2}[0-9A-Za-z]*(?:[-+][0-9A-Za-z().-]+)*)/')"
               if [ -z "$ver" ]; then
                 echo "::warning::could not parse version token from ${tag}; falling back to previous"
                 prev=$(jq -r --arg k "$key" '.[$k] // empty' /tmp/old.json)
@@ -112,7 +112,7 @@ jobs:
               if [ "$tag" = "FEXCore" ]; then
                 perl -e 'exit((shift)=~/^\d{2,6}(\.\d+)?$/ ? 0 : 1)' "$ver" || suspicious=1
               else
-                perl -e 'exit((shift)=~/^(?:\d+\.\d+\.\d+(?:[-+][0-9A-Za-z().-]+)*|\d+\.\d+(?:\.\w+)*(?:[-+][0-9A-Za-z().-]+)*|\d{4}[-.]\d{2}[-.]\d{2}|\d{8})$/ ? 0 : 1)' "$ver" || suspicious=1
+                perl -e 'exit((shift)=~/^(?:\d+\.\d+\.\d+(?:[-+][0-9A-Za-z().-]+)*|\d+\.\d+[0-9A-Za-z]*(?:\.\w+)*(?:[-+][0-9A-Za-z().-]+)*|\d{4}[-.]\d{2}[-.]\d{2}|\d{8})$/ ? 0 : 1)' "$ver" || suspicious=1
               fi
 
               if [ "$suspicious" -eq 1 ]; then
