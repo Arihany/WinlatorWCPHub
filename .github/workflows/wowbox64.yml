@@ -166,9 +166,7 @@ jobs:
 
           cmake -S . -B build -G Ninja \
             -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
-            -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            -DWOW64=1 -DARM_DYNAREC=1 -DWOWBOX64=1 \
-            -DLLVM_MINGW_ROOT="$LLVM_MINGW_ROOT" \
+            -DWOW64=1 -DARM_DYNAREC=1 \
             -DCMAKE_BUILD_TYPE=Release
           
           cmake --build build --target wowbox64 --parallel "$(nproc)"
