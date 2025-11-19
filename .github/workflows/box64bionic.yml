@@ -63,26 +63,21 @@ jobs:
           fi
           echo "Selected channel: $CHANNEL"
 
-          # Helper: Fetch latest stable tag version (e.g., v0.3.0)
           get_latest_ver() {
             gh api "repos/$UPSTREAM_SLUG/releases?per_page=50" --jq '[.[]|select(.draft==false and .prerelease==false)|.tag_name|select(test("^v[0-9]+\\."))]|sort_by(sub("^v";"")|split(".")|map(tonumber))|last'
           }
 
-          # 2. Calculate Variables based on Channel
+          # 2. Calculate Variables
           if [[ "$CHANNEL" == "stable" ]]; then
             REF="${IN_VERSION:-$(get_latest_ver)}"
             [[ -z "$REF" || "$REF" == "null" ]] && exit 1
             
-            VER_PURE="${REF#v}"
-            FILENAME="box64-bionic-${VER_PURE}.wcp"
-            
-            # Outputs for Build
-            echo "ref=${REF}" >> $GITHUB_OUTPUT
-            echo "ver_name=${VER_PURE}" >> $GITHUB_OUTPUT
-            echo "ver_code=0" >> $GITHUB_OUTPUT
-            echo "rel_tag=${REL_TAG_STABLE}" >> $GITHUB_OUTPUT
-            echo "rel_title=Box64 Bionic" >> $GITHUB_OUTPUT
-            echo "notes=Current version: ${VER_PURE}" >> $GITHUB_OUTPUT
+            VER_NAME="${REF#v}"
+            VER_CODE="0"
+            REL_TAG="$REL_TAG_STABLE"
+            REL_TITLE="Box64 Bionic"
+            NOTES="Current version: ${VER_NAME}"
+            FILENAME="box64-bionic-${VER_NAME}.wcp"
 
           else # Weekly
             REF=$(gh api "repos/$UPSTREAM_SLUG/commits/HEAD" --jq .sha)
@@ -91,29 +86,35 @@ jobs:
             
             LATEST_TAG=$(get_latest_ver)
             IFS='.' read -r M m p <<< "${LATEST_TAG#v}"
-            DEV_VER="${M}.${m}.$((p+1))" # Next patch version
+            DEV_VER="${M}.${m}.$((p+1))"
             
+            VER_NAME="${DEV_VER}"
+            VER_CODE="${DATECODE}"
+            REL_TAG="$REL_TAG_WEEKLY"
+            REL_TITLE="Box64 Bionic (Weekly)"
+            NOTES="Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
             FILENAME="box64-bionic-${DEV_VER}-${DATECODE}-${SHORT}.wcp"
-            
-            echo "ref=${REF}" >> $GITHUB_OUTPUT
-            echo "ver_name=${DEV_VER}" >> $GITHUB_OUTPUT
-            echo "ver_code=${DATECODE}" >> $GITHUB_OUTPUT
-            echo "rel_tag=${REL_TAG_WEEKLY}" >> $GITHUB_OUTPUT
-            echo "rel_title=Box64 Bionic (Weekly)" >> $GITHUB_OUTPUT
-            echo "notes=Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})" >> $GITHUB_OUTPUT
           fi
 
-          echo "filename=${FILENAME}" >> $GITHUB_OUTPUT
-
-          # 3. Check if artifact exists
-          REL_TARGET="${REL_TAG_STABLE}"; [[ "$CHANNEL" == "weekly" ]] && REL_TARGET="${REL_TAG_WEEKLY}"
-          
-          if gh release view "$REL_TARGET" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$FILENAME"; then
+          # 3. Check Existence
+          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$FILENAME"; then
             echo "::notice::Asset $FILENAME already exists. Skipping."
-            echo "build=false" >> $GITHUB_OUTPUT
+            BUILD="false"
           else
-            echo "build=true" >> $GITHUB_OUTPUT
+            BUILD="true"
           fi
+
+          # 4. Set Outputs
+          {
+            echo "build=${BUILD}"
+            echo "ref=${REF}"
+            echo "filename=${FILENAME}"
+            echo "ver_name=${VER_NAME}"
+            echo "ver_code=${VER_CODE}"
+            echo "rel_tag=${REL_TAG}"
+            echo "rel_title=${REL_TITLE}"
+            echo "notes=${NOTES}"
+          } >> "$GITHUB_OUTPUT"
 
   build:
     name: Build ${{ format('{0} ({1})', needs.guard.outputs.rel_title, needs.guard.outputs.ver_name) }}
@@ -123,7 +124,6 @@ jobs:
     timeout-minutes: 60
     permissions: { contents: write }
     env:
-      # Load all outputs from guard
       REF:       ${{ needs.guard.outputs.ref }}
       FILENAME:  ${{ needs.guard.outputs.filename }}
       VER_NAME:  ${{ needs.guard.outputs.ver_name }}
@@ -146,13 +146,11 @@ jobs:
 
       - name: Setup NDK & Build
         run: |
-          # NDK Setup
           curl -fsSL "https://dl.google.com/android/repository/android-ndk-${NDK_VER}-linux.zip" -o ndk.zip
           unzip -q ndk.zip && rm ndk.zip
           export NDK_HOME="$PWD/android-ndk-${NDK_VER}"
           TC="$NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin"
 
-          # Configure
           cmake -S src -B build -G Ninja \
             -DCMAKE_C_COMPILER="${TC}/aarch64-linux-android${API_LEVEL}-clang" \
             -DCMAKE_CXX_COMPILER="${TC}/aarch64-linux-android${API_LEVEL}-clang++" \
@@ -160,16 +158,13 @@ jobs:
             -DANDROID=1 -DARM_DYNAREC=1 -DBAD_SIGNAL=1 \
             -DTERMUX=0 -DHAVE_TRACE=0 -DZYDIS3=0 -DBOX32=0 -DCI=0 -DSTATICBUILD=0
           
-          # Build & Strip
           cmake --build build --parallel "$(nproc)"
           "${TC}/llvm-strip" --strip-unneeded build/box64
 
       - name: Package & Release
         run: |
-          # Verify
           readelf -d build/box64 | grep -q "NEEDED.*libc.so" || { echo "Linking failed"; exit 1; }
 
-          # Package
           mkdir -p pkg artifacts
           cp build/box64 pkg/box64 && chmod +x pkg/box64
           
@@ -185,7 +180,6 @@ jobs:
 
           tar --zstd --owner=0 --group=0 --sort=name -cf "artifacts/${FILENAME}" -C pkg profile.json box64
 
-          # Release
           echo -e "- Target: aarch64 / Android ${API_LEVEL}\n- Patches: none\n- ${NOTES_STR}" > release_notes.md
           
           echo "Updating Release: $REL_TAG"
