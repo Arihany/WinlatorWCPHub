@@ -58,15 +58,15 @@
 | Variables | 🏷️ | Box64 |
 |:-:|:-:|-|
 | **STRONGMEM** | 1+ | Mandatory. Prevents race conditions in multi-threaded games. |
-| **BIGBLOCK** | 0-1 | Recommended. Ensures JIT code modifications are detected. Use `0` for maximum stability. |
-| **CALLRET** | 0 | Recommended. Disabling this protects the call stack during frequent JIT operations. |
+| **BIGBLOCK** | 0-3 | Ensures JIT code modifications are detected. Lower values mean greater stability. |
+| **CALLRET** | 0 | Disabling this protects the call stack during frequent JIT operations. |
 | **WEAKBARRIER** | 1 | Mitigates the performance overhead of `STRONGMEM`, but may cause crashes. |
 
 | Variables | 🏷️ | FEXCore |
 |:-:|:-:|-|
 | **TSOEnabled** | 1 | Mandatory. Unity relies on x86 strong memory ordering. Requires hardware TSO support. |
-| **SMCChecks** | FULL | Recommended for accurate JIT detection. `MTrack` may be used in specific cases. |
-| **Multiblock** | 0 | Recommended to prevent JIT-related crashes. Enable `1` only if the game remains stable. |
+| **SMCChecks** | FULL | For accurate JIT detection. `MTrack` may be used in specific cases. |
+| **Multiblock** | 0 | Prevent JIT-related crashes. Enable `1` only if the game remains stable. |
 
 </details>
 
