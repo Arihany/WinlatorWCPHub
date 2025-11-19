@@ -26,8 +26,8 @@ concurrency:
 env:
   GH_TOKEN: ${{ github.token }}
   UPSTREAM_SLUG: FEX-Emu/FEX
-  REL_TAG_STABLE: FEXCore
-  REL_TAG_WEEKLY: FEXCore-Nightly
+  REL_TAG_STABLE: FEXCORE
+  REL_TAG_WEEKLY: FEXCORE-WEEKLY
   LLVM_MINGW_TAG: 20250920
 
 jobs:
@@ -81,7 +81,7 @@ jobs:
             FILENAME="FEXCore-${VER_NAME}.wcp"
 
           else 
-            # Weekly (Nightly) Logic
+            # Weekly Logic
             REF=$(gh api "repos/$UPSTREAM_SLUG/commits/HEAD" --jq .sha)
             SHORT="${REF:0:7}"
             DATECODE=$(date -u +%y%m%d)
@@ -89,13 +89,14 @@ jobs:
             # Find best stable base for naming (e.g. 2502 from FEX-2502)
             LATEST_TAG=$(get_latest_tag)
             BASE_VER="${LATEST_TAG#FEX-}"
-            
-            VER_NAME="${BASE_VER}-${DATECODE}-${SHORT}"
+
+            DIST_VER="${BASE_VER}-${DATECODE}-${SHORT}"
+            VER_NAME="${BASE_VER}"
             VER_CODE="${DATECODE}"
             REL_TAG="$REL_TAG_WEEKLY"
-            REL_TITLE="FEXCore-Nightly"
+            REL_TITLE="FEXCore (Weekly)"
             NOTES="Current version: ${BASE_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
-            FILENAME="FEXCore-${VER_NAME}.wcp"
+            FILENAME="FEXCore-${DIST_VER}.wcp"
           fi
 
           # 3. Check Existence
