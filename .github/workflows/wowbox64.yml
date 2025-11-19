@@ -1,211 +1,213 @@
-name: wowbox64
+name: WowBox64 Stable + Weekly
 
 on:
   workflow_dispatch:
     inputs:
-      llvm_mingw_version:
-        description: llvm-mingw release tag (e.g. 20250430)
-        required: false
-        default: '20250430'
-
-permissions:
-  contents: read
+      channel:
+        type: choice
+        description: "Build channel"
+        options: [stable, weekly]
+        default: stable
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "Stable tag (e.g. v0.3.2). Empty = latest"
+  schedule:
+    - cron: "0 17 * * *"  # daily stable check
+    - cron: "0 18 * * 0"  # weekly build
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  GH_TOKEN: ${{ github.token }}
+  UPSTREAM_SLUG: ptitSeb/box64
+  REL_TAG_STABLE: WOWBox64
+  REL_TAG_WEEKLY: WOWBox64-Nightly
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
+
 jobs:
-  wowbox64:
-    name: Build upstream wowbox64.dll only and package WCP (as-is)
-    runs-on: ubuntu-22.04 # match the llvm-mingw artifact we download
-    timeout-minutes: 60
-    env:
-      LLVM_MINGW_VERSION: ${{ inputs.llvm_mingw_version }}
-      BOX64_PLATFORM_MACRO: -DWOW64=1 -DARM_DYNAREC=1
+  guard:
+    name: Check Upstream
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      build:     ${{ steps.check.outputs.build }}
+      ref:       ${{ steps.check.outputs.ref }}
+      filename:  ${{ steps.check.outputs.filename }}
+      ver_name:  ${{ steps.check.outputs.ver_name }}
+      ver_code:  ${{ steps.check.outputs.ver_code }}
+      rel_tag:   ${{ steps.check.outputs.rel_tag }}
+      rel_title: ${{ steps.check.outputs.rel_title }}
+      notes:     ${{ steps.check.outputs.notes }}
     steps:
-      - name: Checkout upstream Box64
+      - name: Resolve metadata & check existence
+        id: check
+        env:
+          IN_CHANNEL: ${{ inputs.channel }}
+          IN_VERSION: ${{ inputs.version }}
+          IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          set -e
+          
+          # 1. Determine Channel
+          CHANNEL="${IN_CHANNEL:-stable}"
+          if [[ "$IS_SCHEDULE" == "true" ]]; then
+            [[ "$SCHEDULE_CRON" == "0 18 * * 0" ]] && CHANNEL="weekly" || CHANNEL="stable"
+          fi
+          echo "Selected channel: $CHANNEL"
+
+          get_latest_ver() {
+            gh api "repos/$UPSTREAM_SLUG/releases?per_page=50" --jq '[.[]|select(.draft==false and .prerelease==false)|.tag_name|select(test("^v[0-9]+\\."))]|sort_by(sub("^v";"")|split(".")|map(tonumber))|last'
+          }
+
+          # 2. Calculate Variables
+          if [[ "$CHANNEL" == "stable" ]]; then
+            # Stable Logic
+            REF="${IN_VERSION:-$(get_latest_ver)}"
+            [[ -z "$REF" || "$REF" == "null" ]] && exit 1
+            
+            VER_NAME="${REF#v}"
+            VER_CODE="0"
+            REL_TAG="$REL_TAG_STABLE"
+            REL_TITLE="WowBox64"
+            NOTES="Current version: ${VER_NAME}"
+            FILENAME="wowbox64-${VER_NAME}.wcp"
+
+          else 
+            # Weekly Logic
+            REF=$(gh api "repos/$UPSTREAM_SLUG/commits/HEAD" --jq .sha)
+            SHORT="${REF:0:7}"
+            DATECODE=$(date -u +%y%m%d)
+            
+            LATEST_TAG=$(get_latest_ver)
+            IFS='.' read -r M m p <<< "${LATEST_TAG#v}"
+            DEV_VER="${M}.${m}.$((p+1))"
+            
+            VER_NAME="${DEV_VER}-${DATECODE}-${SHORT}"
+            VER_CODE="${DATECODE}"
+            REL_TAG="$REL_TAG_WEEKLY"
+            REL_TITLE="WowBox64 (Weekly)"
+            NOTES="Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
+            FILENAME="wowbox64-${VER_NAME}.wcp"
+          fi
+
+          # 3. Check Existence
+          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$FILENAME"; then
+            echo "::notice::Asset $FILENAME already exists. Skipping."
+            BUILD="false"
+          else
+            BUILD="true"
+          fi
+
+          # 4. Set Outputs
+          {
+            echo "build=${BUILD}"
+            echo "ref=${REF}"
+            echo "filename=${FILENAME}"
+            echo "ver_name=${VER_NAME}"
+            echo "ver_code=${VER_CODE}"
+            echo "rel_tag=${REL_TAG}"
+            echo "rel_title=${REL_TITLE}"
+            echo "notes=${NOTES}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ format('{0} ({1})', needs.guard.outputs.rel_title, needs.guard.outputs.ver_name) }}
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-22.04' }}
+    timeout-minutes: 60
+    permissions: { contents: write }
+    env:
+      REF:       ${{ needs.guard.outputs.ref }}
+      FILENAME:  ${{ needs.guard.outputs.filename }}
+      VER_NAME:  ${{ needs.guard.outputs.ver_name }}
+      VER_CODE:  ${{ needs.guard.outputs.ver_code }}
+      REL_TAG:   ${{ needs.guard.outputs.rel_tag }}
+      REL_TITLE: ${{ needs.guard.outputs.rel_title }}
+      NOTES_STR: ${{ needs.guard.outputs.notes }}
+    steps:
+      - name: Install Deps
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install --no-install-recommends \
+            curl xz-utils ninja-build cmake file zstd \
+            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+
+      - name: Setup llvm-mingw
+        run: |
+          gh release download "$LLVM_MINGW_TAG" -R bylaws/llvm-mingw \
+            -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm-mingw.tar.xz --clobber
+          
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -C /opt/llvm-mingw --strip-components=1 -xJf llvm-mingw.tar.xz
+          
+          echo "/opt/llvm-mingw/bin" >> "$GITHUB_PATH"
+          echo "LLVM_MINGW_ROOT=/opt/llvm-mingw" >> "$GITHUB_ENV"
+
+      - name: Checkout Box64
         uses: actions/checkout@v4
         with:
-          repository: ptitSeb/box64
-          #ref:
-          fetch-depth: 1
+          repository: ${{ env.UPSTREAM_SLUG }}
+          ref: ${{ env.REF }}
           submodules: recursive
+          fetch-depth: 1
 
-      - name: Install dependencies
-        shell: bash
+      - name: Configure & Build
         run: |
-          set -Eeuo pipefail
-          sudo apt-get update -yq
-          sudo apt-get install -yq --no-install-recommends \
-            git cmake make \
-            curl ca-certificates xz-utils file \
-            gcc-aarch64-linux-gnu g++-aarch64-linux-gnu \
-            binutils zstd
-
-      - name: Download llvm-mingw (x86_64 host) into RUNNER_TEMP and expose on PATH
-        id: toolchain
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          url="https://github.com/mstorsjo/llvm-mingw/releases/download/${LLVM_MINGW_VERSION}/llvm-mingw-${LLVM_MINGW_VERSION}-ucrt-ubuntu-22.04-x86_64.tar.xz"
-          echo "Downloading: $url"
-          TOOLCHAIN_DIR="$RUNNER_TEMP/llvm-mingw-root"
-          mkdir -p "$TOOLCHAIN_DIR"
-          curl -fSLo "$RUNNER_TEMP/llvm-mingw.tar.xz" "$url"
-          tar -xf "$RUNNER_TEMP/llvm-mingw.tar.xz" -C "$TOOLCHAIN_DIR" --strip-components=1
-          [ -d "$TOOLCHAIN_DIR/bin" ] || { echo "::error::No bin directory in $TOOLCHAIN_DIR"; ls -la "$TOOLCHAIN_DIR"; exit 1; }
-          # Persist for subsequent steps and also current shell
-          echo "LLVM_MINGW_ROOT=$TOOLCHAIN_DIR" >> "$GITHUB_ENV"
-          echo "$TOOLCHAIN_DIR/bin" >> "$GITHUB_PATH"
-          export LLVM_MINGW_ROOT="$TOOLCHAIN_DIR"
-          export PATH="$TOOLCHAIN_DIR/bin:$PATH"
-          echo "== llvm-mingw bin listing =="; ls -la "$TOOLCHAIN_DIR/bin" | sed -n '1,200p'
-
-      - name: Sanity-check llvm-mingw presence
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          command -v aarch64-w64-mingw32-clang
-          command -v llvm-rc
-          aarch64-w64-mingw32-clang --version | sed -n '1,2p'
-
-      - name: Record commit info
-        id: git
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          SHA=$(git rev-parse HEAD)
-          echo "sha=$SHA" >> $GITHUB_OUTPUT
-          echo "short=${SHA:0:7}" >> $GITHUB_OUTPUT
-
-      - name: Configure top-level (Linux target) per upstream style
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          mkdir -p build
-          cd build
-          cmake .. \
+          cmake -S . -B build -G Ninja \
             -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
             -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
-            ${BOX64_PLATFORM_MACRO} \
-            -DWOWBOX64=1 \
+            -DWOW64=1 -DARM_DYNAREC=1 -DWOWBOX64=1 \
             -DLLVM_MINGW_ROOT="$LLVM_MINGW_ROOT" \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_VERBOSE_MAKEFILE:BOOL=ON
-
-      - name: Export mingw compiler env for ExternalProject
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          MINGW_BIN="${LLVM_MINGW_ROOT}/bin"
-          [ -x "$MINGW_BIN/aarch64-w64-mingw32-clang" ] || { echo "::error::aarch64-w64-mingw32-clang not found under $MINGW_BIN"; exit 1; }
-          {
-            echo "CC=$MINGW_BIN/aarch64-w64-mingw32-clang"
-            echo "CXX=$MINGW_BIN/aarch64-w64-mingw32-clang++"
-            echo "ASM=$MINGW_BIN/aarch64-w64-mingw32-clang"
-            echo "RC=$MINGW_BIN/llvm-rc"
-            echo "AR=$MINGW_BIN/llvm-ar"
-            echo "NM=$MINGW_BIN/llvm-nm"
-            echo "RANLIB=$MINGW_BIN/llvm-ranlib"
-            echo "STRIP=$MINGW_BIN/llvm-strip"
-          } >> "$GITHUB_ENV"
-          echo "Will use mingw toolchain from: $MINGW_BIN"
-
-      - name: Show CMake cache and targets (no pipe)
-        shell: bash
-        working-directory: build
-        run: |
-          set -Eeuo pipefail
-          echo '== Grep WOW/WINE/MINGW from CMakeCache.txt =='
-          grep -Ei 'WOW|WINE|MINGW' CMakeCache.txt || true
-          cmake --build . --target help > help.txt || true
-          echo '== First 200 lines of help.txt =='
-          sed -n '1,200p' help.txt || true
-
-      - name: Build wowbox64 target (fail if missing)
-        shell: bash
-        working-directory: build
-        run: |
-          set -Eeuo pipefail
-          if [ ! -f help.txt ]; then
-            cmake --build . --target help > help.txt || true
-          fi
-          if grep -qi "wowbox64" help.txt; then
-            echo "CC=$CC"; echo "CXX=$CXX"; echo "ASM=$ASM"; echo "RC=$RC"
-            cmake --build . --target wowbox64 -- -j"$(nproc)"
-          else
-            echo "::error::CMake/Ninja target 'wowbox64' not found."
-            exit 1
-          fi
-
-      - name: Locate and verify wowbox64.dll (ExternalProject output)
-        id: out
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          CANDIDATE="build/wowbox64-prefix/src/wowbox64-build/wowbox64.dll"
-          if [ -f "$CANDIDATE" ]; then
-            DLL="$CANDIDATE"
-          else
-            DLL=$(find build -type f -iname 'wowbox64.dll' | head -n1 || true)
-          fi
-          if [ -z "$DLL" ]; then
-            echo "::error::wowbox64.dll not produced"; exit 1
-          fi
-      
-          echo "== file(1) =="
-          file "$DLL"
-      
-          echo "== llvm-readobj -h =="
-          "$LLVM_MINGW_ROOT/bin/llvm-readobj" -h "$DLL" | tee headers.txt
-          grep -qiE 'Format:\s*COFF' headers.txt || { echo "::error::Not a PE/COFF file"; exit 1; }
-          grep -qiE 'Machine:.*(ARM64|AARCH64)|Arch:\s*aarch64' headers.txt || { echo "::error::Not ARM64 (AArch64)"; exit 1; }
-      
-          echo "dll=$DLL" >> "$GITHUB_OUTPUT"
-
-      - name: Decide date code (YYMMDD, KST)
-        id: date
-        shell: bash
-        run: echo "code=$(TZ=Asia/Seoul date +%y%m%d)" >> $GITHUB_OUTPUT
-
-      - name: Package WCP (WowBox64)
-        id: wcp
-        env:
-          DATECODE: ${{ steps.date.outputs.code }}
-          SHORT:    ${{ steps.git.outputs.short }}
-        shell: bash
-        run: |
-          set -Eeuo pipefail
-          mkdir -p out pkgroot/system32
-          cp "${{ steps.out.outputs.dll }}" pkgroot/system32/wowbox64.dll
+            -DCMAKE_BUILD_TYPE=Release
           
-          cat > pkgroot/profile.json <<EOF
+          cmake --build build --target wowbox64 --parallel "$(nproc)"
+
+      - name: Package & Release
+        run: |
+          # 1. Find DLL
+          DLL=$(find build -name "wowbox64.dll" -type f | head -n1)
+          [[ -f "$DLL" ]] || { echo "::error::wowbox64.dll not found"; exit 1; }
+          
+          # 2. Verify Architecture (Safety Check)
+          llvm-readobj -h "$DLL" | grep -qE 'Machine:.*(ARM64|AARCH64)' || { echo "::error::Not ARM64"; exit 1; }
+          
+          # 3. Prepare Packaging
+          rm -rf pkg
+          mkdir -p pkg/system32 artifacts
+          cp "$DLL" pkg/system32/wowbox64.dll
+          llvm-strip --strip-unneeded pkg/system32/wowbox64.dll
+
+          # 4. Generate Profile
+          cat > pkg/profile.json <<EOF
           {
             "type": "WOWBox64",
-            "versionName": "nightly-${SHORT}",
-            "versionCode": ${DATECODE},
-            "description": "${DATECODE} WowBox64 Build by Ari",
-            "files": [
-              { "source": "system32/wowbox64.dll", "target": "\${system32}/wowbox64.dll" }
-            ]
+            "versionName": "${VER_NAME}",
+            "versionCode": ${VER_CODE},
+            "description": "WowBox64 Helper (Upstream: ptitSeb)",
+            "files": [{ "source": "system32/wowbox64.dll", "target": "\${system32}/wowbox64.dll" }]
           }
           EOF
-          tar --zstd --format=ustar --owner=0 --group=0 --numeric-owner \
-            -C pkgroot \
-            -cf "out/wowbox64-nightly-${DATECODE}.wcp" ./profile.json ./system32/ ./system32/wowbox64.dll
-          echo "wcp=out/wowbox64-nightly-${DATECODE}.wcp" >> $GITHUB_OUTPUT
 
-      - name: Upload WCP artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: wowbox64-nightly-${{ steps.date.outputs.code }}.wcp
-          path: ${{ steps.wcp.outputs.wcp }}
-          if-no-files-found: error
+          # 5. Compress
+          tar --zstd -C pkg --format=gnu --owner=0 --group=0 --numeric-owner --sort=name \
+            -cf "artifacts/${FILENAME}" profile.json system32
 
-      - name: Upload bare DLL artifact (for quick testing)
-        uses: actions/upload-artifact@v4
-        with:
-          name: wowbox64-${{ steps.date.outputs.code }}.dll
-          path: ${{ steps.out.outputs.dll }}
-          if-no-files-found: error
+          # 6. Release Notes
+          echo -e "- Target: AArch64 PE/COFF Helper\n- ${NOTES_STR}" > release_notes.md
+          
+          echo "Updating Release: $REL_TAG"
+          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$REL_TAG" --repo "$GITHUB_REPOSITORY" --title "$REL_TITLE" --notes-file release_notes.md
+          else
+            gh release create "$REL_TAG" --repo "$GITHUB_REPOSITORY" --title "$REL_TITLE" --notes-file release_notes.md
+          fi
+          
+          gh release upload "$REL_TAG" "artifacts/${FILENAME}" --repo "$GITHUB_REPOSITORY" --clobber
