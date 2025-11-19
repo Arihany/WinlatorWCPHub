@@ -1,0 +1,257 @@
+name: FEXCore Stable + Weekly
+
+on:
+  workflow_dispatch:
+    inputs:
+      channel:
+        type: choice
+        description: "Build channel"
+        options: [stable, weekly]
+        default: stable
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "Stable tag (e.g. FEX-2502). Empty = latest"
+  schedule:
+    - cron: "0 17 * * *"  # daily stable check
+    - cron: "0 18 * * 0"  # weekly build
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  UPSTREAM_SLUG: FEX-Emu/FEX
+  REL_TAG_STABLE: FEXCore
+  REL_TAG_WEEKLY: FEXCore-Nightly
+  LLVM_MINGW_TAG: 20250920
+
+jobs:
+  guard:
+    name: Check Upstream
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      build:     ${{ steps.check.outputs.build }}
+      ref:       ${{ steps.check.outputs.ref }}
+      filename:  ${{ steps.check.outputs.filename }}
+      ver_name:  ${{ steps.check.outputs.ver_name }}
+      ver_code:  ${{ steps.check.outputs.ver_code }}
+      rel_tag:   ${{ steps.check.outputs.rel_tag }}
+      rel_title: ${{ steps.check.outputs.rel_title }}
+      notes:     ${{ steps.check.outputs.notes }}
+    steps:
+      - name: Resolve metadata & check existence
+        id: check
+        env:
+          IN_CHANNEL: ${{ inputs.channel }}
+          IN_VERSION: ${{ inputs.version }}
+          IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+          SCHEDULE_CRON: ${{ github.event.schedule }}
+        run: |
+          set -e
+          
+          # 1. Determine Channel
+          CHANNEL="${IN_CHANNEL:-stable}"
+          if [[ "$IS_SCHEDULE" == "true" ]]; then
+            [[ "$SCHEDULE_CRON" == "0 18 * * 0" ]] && CHANNEL="weekly" || CHANNEL="stable"
+          fi
+          echo "Selected channel: $CHANNEL"
+
+          get_latest_tag() {
+            gh api "repos/$UPSTREAM_SLUG/tags?per_page=50" --jq '[.[].name|select(test("^FEX-[0-9]+(\\.[0-9]+)?$"))]|sort_by(sub("^FEX-";"")|split(".")|map(tonumber))|last'
+          }
+
+          # 2. Calculate Variables
+          if [[ "$CHANNEL" == "stable" ]]; then
+            # Stable Logic
+            REF="${IN_VERSION:-$(get_latest_tag)}"
+            [[ -z "$REF" || "$REF" == "null" ]] && exit 1
+            
+            # Remove 'FEX-' prefix for version name (e.g. FEX-2502 -> 2502)
+            VER_NAME="${REF#FEX-}"
+            VER_CODE="0"
+            REL_TAG="$REL_TAG_STABLE"
+            REL_TITLE="FEXCore"
+            NOTES="Current version: ${VER_NAME}"
+            FILENAME="FEXCore-${VER_NAME}.wcp"
+
+          else 
+            # Weekly (Nightly) Logic
+            REF=$(gh api "repos/$UPSTREAM_SLUG/commits/HEAD" --jq .sha)
+            SHORT="${REF:0:7}"
+            DATECODE=$(date -u +%y%m%d)
+            
+            # Find best stable base for naming (e.g. 2502 from FEX-2502)
+            LATEST_TAG=$(get_latest_tag)
+            BASE_VER="${LATEST_TAG#FEX-}"
+            
+            VER_NAME="${BASE_VER}-${DATECODE}-${SHORT}"
+            VER_CODE="${DATECODE}"
+            REL_TAG="$REL_TAG_WEEKLY"
+            REL_TITLE="FEXCore-Nightly"
+            NOTES="Current version: ${BASE_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
+            FILENAME="FEXCore-${VER_NAME}.wcp"
+          fi
+
+          # 3. Check Existence
+          # Check if asset exists in the release
+          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$FILENAME"; then
+            echo "::notice::Asset $FILENAME already exists. Skipping."
+            BUILD="false"
+          else
+            # Double check for Weekly: if the body contains the SHA, we might skip (optional, but safer to check asset)
+            BUILD="true"
+          fi
+
+          # 4. Set Outputs
+          {
+            echo "build=${BUILD}"
+            echo "ref=${REF}"
+            echo "filename=${FILENAME}"
+            echo "ver_name=${VER_NAME}"
+            echo "ver_code=${VER_CODE}"
+            echo "rel_tag=${REL_TAG}"
+            echo "rel_title=${REL_TITLE}"
+            echo "notes=${NOTES}"
+          } >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build ${{ format('{0} ({1})', needs.guard.outputs.rel_title, needs.guard.outputs.ver_name) }}
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    permissions: { contents: write }
+    env:
+      REF:       ${{ needs.guard.outputs.ref }}
+      FILENAME:  ${{ needs.guard.outputs.filename }}
+      VER_NAME:  ${{ needs.guard.outputs.ver_name }}
+      VER_CODE:  ${{ needs.guard.outputs.ver_code }}
+      REL_TAG:   ${{ needs.guard.outputs.rel_tag }}
+      REL_TITLE: ${{ needs.guard.outputs.rel_title }}
+      NOTES_STR: ${{ needs.guard.outputs.notes }}
+    steps:
+      - name: Install Host Tooling
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install --no-install-recommends \
+            curl xz-utils jq ca-certificates git ninja-build cmake pkg-config build-essential python3 zstd
+
+      - name: Setup llvm-mingw
+        run: |
+          gh release download "$LLVM_MINGW_TAG" -R bylaws/llvm-mingw \
+            -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm-mingw.tar.xz --clobber
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -C /opt/llvm-mingw --strip-components=1 -xJf llvm-mingw.tar.xz
+          echo "/opt/llvm-mingw/bin" >> "$GITHUB_PATH"
+
+      - name: Checkout FEX
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_SLUG }}
+          ref: ${{ env.REF }}
+          submodules: recursive
+          path: src
+          fetch-depth: 1
+
+      - name: Build FEXCore
+        run: |
+          # Clean previous state (important on self-hosted)
+          rm -rf pkg stage-ec stage-wo
+          mkdir -p pkg/system32
+
+          cd src
+          mkdir -p ../pkg/system32
+
+          # --- Helper Function ---
+          build_arch() {
+            local TRIPLE="$1"
+            local DEST="$2"
+            local BUILD_DIR="build-$TRIPLE"
+
+            echo "::group::Building $TRIPLE"
+            rm -rf "$BUILD_DIR" && mkdir "$BUILD_DIR" && cd "$BUILD_DIR"
+            cmake -GNinja -Wno-dev \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_TOOLCHAIN_FILE=../Data/CMake/toolchain_mingw.cmake \
+              -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-windows \
+              -DENABLE_LTO=False \
+              -DMINGW_BUILD=1 \
+              -DCMAKE_DISABLE_FIND_PACKAGE_fmt=true \
+              -DCMAKE_DISABLE_FIND_PACKAGE_range-v3=true \
+              -DCMAKE_C_COMPILER_WORKS=1 \
+              -DCMAKE_CXX_COMPILER_WORKS=1 \
+              -DMINGW_TRIPLE="${TRIPLE}-w64-mingw32" \
+              -DBUILD_TESTING=False \
+              -DCMAKE_INSTALL_PREFIX=/usr ..
+            
+            ninja
+            DESTDIR="$DEST" ninja install
+            cd ..
+            echo "::endgroup::"
+          }
+
+          # 1. Build ARM64EC
+          build_arch "arm64ec" "$PWD/../stage-ec"
+          
+          # 2. Build AArch64 (WOW64)
+          build_arch "aarch64" "$PWD/../stage-wo"
+
+      - name: Package & Release
+        run: |
+          WCP_DIR="pkg"
+          
+          # Gather DLLs
+          for ST in "stage-ec" "stage-wo"; do
+            SRC="$ST/usr/lib/wine/aarch64-windows"
+            if [[ -d "$SRC" ]]; then
+              find "$SRC" -type f -name '*.dll' -exec cp {} "$WCP_DIR/system32/" \;
+            fi
+          done
+
+          # Strip
+          find "$WCP_DIR/system32" -type f -name '*.dll' -print0 | xargs -0 -r llvm-strip -s
+
+          # Verify
+          if [[ -z $(ls -A "$WCP_DIR/system32") ]]; then
+            echo "::error::No DLLs found in build output!"
+            exit 1
+          fi
+
+          # Generate Profile
+          jq -n \
+            --arg VER "$VER_NAME" \
+            --arg CODE "$VER_CODE" \
+            --arg DESC "Built on the Winlator WCP Hub (Upstream: bylaws)" \
+            --slurpfile FILES <(find "$WCP_DIR/system32" -maxdepth 1 -type f -name '*.dll' -printf '%f\n' \
+                                | jq -Rn '[inputs | {source: ("system32/"+.), target: ("${system32}/"+.)}]') \
+            '{
+              type: "FEXCore",
+              versionName: $VER,
+              versionCode: ($CODE | tonumber),
+              description: $DESC,
+              files: ($FILES[0] // [])
+            }' > "$WCP_DIR/profile.json"
+
+          # Compress
+          mkdir -p artifacts
+          tar --zstd -C "$WCP_DIR" \
+            --format=gnu --owner=0 --group=0 --numeric-owner --sort=name \
+            -cf "artifacts/${FILENAME}" profile.json system32
+
+          # Release Notes
+          echo -e "- Target: AArch64/ARM64EC\n- ${NOTES_STR}" > release_notes.md
+
+          echo "Updating Release: $REL_TAG"
+          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$REL_TAG" --repo "$GITHUB_REPOSITORY" --title "$REL_TITLE" --notes-file release_notes.md
+          else
+            gh release create "$REL_TAG" --repo "$GITHUB_REPOSITORY" --title "$REL_TITLE" --notes-file release_notes.md
+          fi
+          
+          gh release upload "$REL_TAG" "artifacts/${FILENAME}" --repo "$GITHUB_REPOSITORY" --clobber
