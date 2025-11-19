@@ -1,0 +1,163 @@
+name: Purrser
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  bump-readme:
+    name: Update README
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup & Validate Map
+        id: setup
+        run: |
+          # 1. Define Mapping
+          cat > map.json <<'EOF'
+          {
+            "fex":      "FEXCore",
+            "dxvk":     "DXVK",
+            "sarek":    "DXVK-SAREK",
+            "gplasync": "DXVK-GPLASYNC",
+            "vkd3d":    "VKD3D-PROTON",
+            "box64":    "BOX64-BIONIC-NIGHTLY"
+          }
+          EOF
+
+          # 2. Load Previous Cache
+          mkdir -p .cache
+          [ -s .cache/current_versions.json ] && cp .cache/current_versions.json old.json || echo '{}' > old.json
+          
+          # 3. Validate README Placeholders
+          echo "::group::Validating Placeholders"
+          missing=0
+          while read -r key; do
+            count=$(grep -o "<!--${key}-->" README.md | wc -l | tr -d ' ')
+            if [ "$count" -ne 1 ]; then
+              echo "::error file=README.md::Placeholder <!--${key}--> found $count times (must be 1)"
+              missing=1
+            else
+              echo "✅ <!--${key}--> found"
+            fi
+          done < <(jq -r 'keys[]' map.json)
+          [ "$missing" -eq 0 ] || exit 1
+          echo "::endgroup::"
+
+      - name: Resolve Versions
+        id: resolve
+        run: |
+          cp old.json new.json
+          
+          # Regex to capture version after "- Current version:"
+          # Supports: 1.2.3, 3.0a, 2.14-rc1, etc.
+          REGEX='^\s*-\s*Current\s+version:\s*([0-9]+(?:\.[0-9]+){0,2}[0-9A-Za-z]*(?:[-+][0-9A-Za-z().-]+)*)'
+
+          echo "::group::Fetching Release Info"
+          
+          while IFS=$'\t' read -r key tag; do
+            printf "%-10s : " "$key"
+
+            # Fetch Release Body via GitHub CLI
+            if ! body=$(gh release view "$tag" --repo "$REPO" --json body --jq '.body' 2>/dev/null); then
+              echo "⚠️ Release not found for $tag (Keep old)"
+              continue
+            fi
+
+            # Parse Version
+            ver=$(echo "$body" | perl -ne "print \$1 if /$REGEX/m")
+            
+            if [ -z "$ver" ]; then
+              echo "⚠️ Parsed empty string for $tag (Keep old)"
+              continue
+            fi
+
+            # Validation (Suspicious check)
+            valid=1
+            if [ "$tag" = "FEXCore" ]; then
+              perl -e 'exit((shift)=~/^\d{2,6}(\.\d+)?$/ ? 0 : 1)' "$ver" || valid=0
+            else
+              perl -e 'exit((shift)=~/^(?:\d+\.\d+\.\d+(?:[-+][\w().-]+)*|\d+\.\d+[0-9A-Za-z]*(?:\.\w+)*(?:[-+][\w().-]+)*|\d{4}[-.]\d{2}[-.]\d{2}|\d{8})$/ ? 0 : 1)' "$ver" || valid=0
+            fi
+
+            if [ "$valid" -eq 0 ]; then
+              echo "⚠️ Suspicious format '$ver' (Keep old or force if new)"
+              # Box64 special fallback logic for suspicious inputs could go here if needed
+            fi
+
+            # Box64 Special Formatting (Stable · Nightly)
+            final_ver="$ver"
+            if [ "$key" = "box64" ]; then
+              # Extract numeric base (e.g. 0.3.2 from 0.3.2-rc1)
+              base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
+              if [ -n "$base" ]; then
+                maj=${base%%.*}; rest=${base#*.}; min=${rest%%.*}; pat=${rest#*.}
+                if [ "$pat" -gt 0 ]; then
+                  final_ver="${maj}.${min}.$((pat-1)) · ${maj}.${min}.${pat}"
+                fi
+              fi
+            fi
+
+            # Update JSON
+            jq --arg k "$key" --arg v "$final_ver" '.[$k]=$v' new.json > new.tmp && mv new.tmp new.json
+            echo "✅ $final_ver"
+
+          done < <(jq -r 'to_entries[] | "\(.key)\t\(.value)"' map.json)
+          echo "::endgroup::"
+
+          # Detect Changes
+          if cmp -s old.json new.json; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "No changes detected."
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+            echo "Changes detected!"
+          fi
+
+      - name: Apply & Push
+        if: steps.resolve.outputs.changed == 'true'
+        run: |
+          # 1. Update README
+          cp README.md README.tmp
+          while IFS=$'\t' read -r key ver; do
+             # Regex replacement: <!--key--> old_text | -> <!--key--> new_ver |
+             perl -0777 -pe "s/(<!--${key}-->)(?:[^\\|\\n]*)?(?=\\s*\\|)/\\1 ${ver}/g" -i README.tmp
+          done < <(jq -r 'to_entries[] | "\(.key)\t\(.value)"' new.json)
+          mv README.tmp README.md
+
+          # 2. Save Snapshot
+          mv new.json .cache/current_versions.json
+
+          # 3. Generate Commit Message
+          msg="ci(readme): bump"
+          while IFS=$'\t' read -r key ver; do
+            old=$(jq -r --arg k "$key" '.[$k] // "∅"' old.json)
+            [ "$old" != "$ver" ] && msg="${msg} ${key} ${old}→${ver};"
+          done < <(jq -r 'to_entries[] | "\(.key)\t\(.value)"' .cache/current_versions.json)
+
+          # 4. Commit
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md .cache/current_versions.json
+          git commit -m "${msg%;}" # remove trailing semicolon
+          git push
