@@ -1,0 +1,178 @@
+name: VKD3D
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+  schedule:
+    - cron: "0 18 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  VKD3D_REPO: HansKristian-Work/vkd3d-proton
+  REL_TAG: VKD3D-PROTON
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
+
+jobs:
+  guard:
+    name: Check Update
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      build:    ${{ steps.detect.outputs.missing }}
+      to_build: ${{ steps.detect.outputs.list }}
+    steps:
+      - name: Detect Missing Versions
+        id: detect
+        run: |
+          # 1. Get Existing Versions (Local)
+          echo "Checking existing..."
+          gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null \
+            | sed -nE 's/^vkd3d-proton-(.*)\.wcp$/\1/p' | sort -V > existing.txt || touch existing.txt
+
+          # 2. Get Upstream Tags (>= 2.14.1)
+          echo "Fetching upstream..."
+          gh api "repos/$VKD3D_REPO/tags?per_page=100" --jq '.[].name' \
+            | grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V > tags.txt
+
+          # Filter >= 2.14.1
+          awk '
+            function cmp(a,b, i,A,B){split(a,A,".");split(b,B,".");for(i=1;i<=3;i++){if((A[i]+0)<(B[i]+0))return -1;if((A[i]+0)>(B[i]+0))return 1}return 0}
+            { base=substr($0,2); if (cmp(base,"2.14.1")>=0) print $0 }
+          ' tags.txt > candidates.txt
+
+          # 3. Compare
+          missing_list=""
+          while read -r tag; do
+            base="${tag#v}"
+            if ! grep -Fxq "$base" existing.txt; then
+              missing_list+="$tag $base"$'\n'
+            fi
+          done < candidates.txt
+
+          if [[ -n "$missing_list" ]]; then
+            echo "Found missing: $missing_list"
+            echo "list<<EOF" >> "$GITHUB_OUTPUT"
+            echo -n "$missing_list" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Up to date."
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  build:
+    name: Build & Release
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    permissions: { contents: write }
+    steps:
+      - name: Install Deps
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install --no-install-recommends \
+            curl xz-utils jq git glslang-tools build-essential python3-venv zstd
+
+      - name: Setup Build Env
+        run: |
+          rm -rf src pkg_temp VKD3D_WCP out .venv
+
+          # 1. Python Venv (Meson/Ninja)
+          python3 -m venv .venv
+          .venv/bin/pip install "meson==1.2.3" "ninja==1.11.1"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+          # 2. llvm-mingw
+          gh release download "$LLVM_MINGW_TAG" -R bylaws/llvm-mingw \
+            -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm.tar.xz --clobber
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -C /opt/llvm-mingw --strip-components=1 -xJf llvm.tar.xz
+          echo "/opt/llvm-mingw/bin" >> "$GITHUB_PATH"
+
+      - name: Clone VKD3D
+        run: |
+          git clone --recurse-submodules "https://github.com/$VKD3D_REPO.git" src
+          git -C src config user.name "Builder" && git -C src config user.email "bot@noreply"
+
+      - name: Build Loop
+        env:
+          TO_BUILD: ${{ needs.guard.outputs.to_build }}
+        run: |
+          mkdir -p out
+          cd src
+          git fetch --tags --force
+
+          while read -r tag base; do
+            echo "::group::Building $tag"
+            git reset --hard && git clean -fdx && git checkout -f "$tag"
+            git submodule update --init --recursive
+
+            # Build using upstream script
+            # --no-package: We handle packaging (WCP) ourselves
+            ./package-release.sh "$tag" "../pkg_temp" --no-package
+
+            # Restructure for WCP
+            SRC_ROOT="../pkg_temp/vkd3d-proton-$tag"
+            WCP_DIR="../VKD3D_WCP"
+            rm -rf "$WCP_DIR" && mkdir -p "$WCP_DIR/system32" "$WCP_DIR/syswow64"
+
+            # Copy DLLs (Handle x64/bin structure variations)
+            [ -d "$SRC_ROOT/x64/bin" ] && CP_SRC_64="$SRC_ROOT/x64/bin" || CP_SRC_64="$SRC_ROOT/x64"
+            [ -d "$SRC_ROOT/x86/bin" ] && CP_SRC_86="$SRC_ROOT/x86/bin" || CP_SRC_86="$SRC_ROOT/x86"
+
+            cp "$CP_SRC_64"/*.dll "$WCP_DIR/system32/"
+            cp "$CP_SRC_86"/*.dll "$WCP_DIR/syswow64/"
+            
+            # Strip
+            find "$WCP_DIR" -name '*.dll' -print0 | xargs -0 -r llvm-strip -s
+
+            # Generate Profile
+            jq -n \
+              --arg VER "$base" \
+              --arg DESC "Built on the Winlator WCP Hub (Upstream: Hans-Kristian Arntzen)" \
+              --slurpfile X64 <(ls "$WCP_DIR/system32" | jq -R '{source: ("system32/"+.), target: ("${system32}/"+.)}') \
+              --slurpfile X86 <(ls "$WCP_DIR/syswow64" | jq -R '{source: ("syswow64/"+.), target: ("${syswow64}/"+.)}') \
+              '{
+                type: "VKD3D",
+                versionName: $VER,
+                versionCode: 0,
+                description: $DESC,
+                files: ($X64 + $X86)
+              }' > "$WCP_DIR/profile.json"
+
+            # Package
+            tar --zstd -C "$WCP_DIR" --format=gnu --owner=0 --group=0 --sort=name \
+              -cf "../out/vkd3d-proton-${base}.wcp" profile.json system32 syswow64
+            
+            echo "::endgroup::"
+          done <<< "$TO_BUILD"
+
+      - name: Release
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          NOTES="RELEASE_NOTES.md"
+          echo -e "🤖 Automated VKD3D-Proton builds (2.14.1+)\n" > "$NOTES"
+          
+          if compgen -G "out/vkd3d-proton-*.wcp" > /dev/null; then
+             LATEST=$(ls out/vkd3d-proton-*.wcp | sort -V | tail -n1 | sed -E 's/.*vkd3d-proton-(.*)\.wcp/\1/')
+             echo "- Current version: $LATEST" >> "$NOTES"
+             
+             if ! gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1; then
+               gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
+             else
+               gh release edit "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
+             fi
+             gh release upload "$REL_TAG" out/vkd3d-proton-*.wcp --repo "$REPO" --clobber
+          else
+             echo "No artifacts produced."
+          fi
