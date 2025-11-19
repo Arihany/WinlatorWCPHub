@@ -155,7 +155,6 @@ jobs:
 
           cmake -S src -B build -G Ninja \
             -DCMAKE_C_COMPILER="${TC}/aarch64-linux-android${API_LEVEL}-clang" \
-            -DCMAKE_CXX_COMPILER="${TC}/aarch64-linux-android${API_LEVEL}-clang++" \
             -DCMAKE_BUILD_TYPE=Release \
             -DANDROID=1 -DARM_DYNAREC=1 -DBAD_SIGNAL=1 \
             -DTERMUX=0 -DHAVE_TRACE=0 -DZYDIS3=0 -DBOX32=0 -DCI=0 -DSTATICBUILD=0
