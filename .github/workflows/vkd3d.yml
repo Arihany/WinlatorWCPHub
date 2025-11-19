@@ -18,7 +18,7 @@ env:
   GH_TOKEN: ${{ github.token }}
   VKD3D_REPO: HansKristian-Work/vkd3d-proton
   REL_TAG: VKD3D-PROTON
-  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }}
 
 jobs:
   guard:
@@ -35,12 +35,12 @@ jobs:
           # 1. Get Existing Versions (Local)
           echo "Checking existing..."
           gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null \
-            | sed -nE 's/^vkd3d-proton-(.*)\.wcp$/\1/p' | sort -V > existing.txt || touch existing.txt
+            | sed -nE 's/^vkd3d-proton-(v?[0-9].*)\.wcp$/\1/p' | sort -V > existing.txt || touch existing.txt
 
           # 2. Get Upstream Tags (>= 2.14.1)
           echo "Fetching upstream..."
           gh api "repos/$VKD3D_REPO/tags?per_page=100" --jq '.[].name' \
-            | grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V > tags.txt
+            | grep -E '^v[0-9]+\.[0-9]+.*$' | sort -V > tags.txt
 
           # Filter >= 2.14.1
           awk '
@@ -92,7 +92,7 @@ jobs:
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
 
           # 2. llvm-mingw
-          gh release download "$LLVM_MINGW_TAG" -R bylaws/llvm-mingw \
+          gh release download "$LLVM_MINGW_TAG" -R mstorsjo/llvm-mingw \
             -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm.tar.xz --clobber
           sudo mkdir -p /opt/llvm-mingw
           sudo tar -C /opt/llvm-mingw --strip-components=1 -xJf llvm.tar.xz

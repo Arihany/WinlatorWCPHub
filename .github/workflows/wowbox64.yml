@@ -1,4 +1,5 @@
 name: WowBox64 Stable + Weekly
+#mstorsjo
 
 on:
   workflow_dispatch:
@@ -28,7 +29,7 @@ env:
   UPSTREAM_SLUG: ptitSeb/box64
   REL_TAG_STABLE: WOWBOX64
   REL_TAG_WEEKLY: WOWBOX64-WEEKLY
-  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }}
 
 jobs:
   guard:
@@ -143,7 +144,7 @@ jobs:
 
       - name: Setup llvm-mingw
         run: |
-          gh release download "$LLVM_MINGW_TAG" -R bylaws/llvm-mingw \
+          gh release download "$LLVM_MINGW_TAG" -R mstorsjo/llvm-mingw \
             -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm-mingw.tar.xz --clobber
           
           sudo mkdir -p /opt/llvm-mingw
