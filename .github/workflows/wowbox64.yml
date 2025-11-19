@@ -26,8 +26,8 @@ concurrency:
 env:
   GH_TOKEN: ${{ github.token }}
   UPSTREAM_SLUG: ptitSeb/box64
-  REL_TAG_STABLE: WOWBox64
-  REL_TAG_WEEKLY: WOWBox64-Nightly
+  REL_TAG_STABLE: WOWBOX64
+  REL_TAG_WEEKLY: WOWBOX64-WEEKLY
   LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20250920' }}
 
 jobs:
@@ -88,13 +88,14 @@ jobs:
             LATEST_TAG=$(get_latest_ver)
             IFS='.' read -r M m p <<< "${LATEST_TAG#v}"
             DEV_VER="${M}.${m}.$((p+1))"
-            
-            VER_NAME="${DEV_VER}-${DATECODE}-${SHORT}"
+
+            DIST_VER="${DEV_VER}-${DATECODE}-${SHORT}"
+            VER_NAME="${DEV_VER}"
             VER_CODE="${DATECODE}"
             REL_TAG="$REL_TAG_WEEKLY"
             REL_TITLE="WowBox64 (Weekly)"
             NOTES="Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
-            FILENAME="wowbox64-${VER_NAME}.wcp"
+            FILENAME="wowbox64-${DIST_VER}.wcp"
           fi
 
           # 3. Check Existence
@@ -161,6 +162,8 @@ jobs:
 
       - name: Configure & Build
         run: |
+          rm -rf build
+
           cmake -S . -B build -G Ninja \
             -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
             -DCMAKE_CXX_COMPILER=aarch64-linux-gnu-g++ \
