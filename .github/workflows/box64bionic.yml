@@ -16,7 +16,7 @@ on:
         type: string
         description: "Stable tag (e.g. v0.3.8). Empty = latest"
   schedule:
-    - cron: "0 17 * * *"  # daily stable
+    - cron: "0 17 * * *"  # daily stable check
     - cron: "0 18 * * 0"  # weekly
 
 concurrency:
