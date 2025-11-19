@@ -44,17 +44,29 @@
 <!--| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) &nbsp; [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||-->
 
 <details>
-<summary>💡Useful info</summary>
+<summary>💡Basic Information and Unity Settings</summary>
 <br>
 
 | Type | 📝 |
 |:-:|-|
-| **FEXCore** | Works especially well with newer games and can reach very high performance on an ARM64 system that uses an Arm64EC or Proton style environment |
-| **Box64** | Very flexible and particularly strong for older or finicky software when its dynarec settings are tuned for the host CPU |
-| **WowBox64** | A Box64 variant focused on running 32-bit x86 Windows applications through Wine on ARM64 |
+| **FEXCore** | Focuses on accuracy and modern titles. Delivers native-like performance on high-end systems by leveraging Arm64EC architecture and hardware features like TSO. |
+| **Box64** | Renowned for speed and flexibility. Excellent for older titles or optimizing performance on specific hardware through extensive Dynarec customization. |
+| **WowBox64** | An in-process CPU emulation helper that enables native ARM64 Wine to run x86_64 binaries. |
 
-- Starting with build `2509`, FEX performance in Unity engine games has improved significantly. Older Unity titles still require proper configuration.
-- Basic `Box64` settings for unity games: `STRONGMEM=1+` `CALLRET=0` `WEAKBARRIER=0~1`. (`WEAKBARRIER` can mitigate the performance hit from `STRONGMEM`, but regressions or crashes have been reported depending on the build/version/game. If issues occur, set it to `0`)
+<h3>For Unity</h3>
+
+| Variables | 🏷️ | Box64 |
+|:-:|:-:|-|
+| **STRONGMEM** | 1+ | Mandatory. Prevents race conditions in multi-threaded games. |
+| **BIGBLOCK** | 0-1 | Recommended. Ensures JIT code modifications are detected. Use `0` for maximum stability. |
+| **CALLRET** | 0 | Recommended. Disabling this protects the call stack during frequent JIT operations. |
+| **WEAKBARRIER** | 1 | Mitigates the performance overhead of `STRONGMEM`, but may cause crashes. |
+
+| Variables | 🏷️ | FEXCore |
+|:-:|:-:|-|
+| **TSOEnabled** | 1 | Mandatory. Unity relies on x86 strong memory ordering. Requires hardware TSO support. |
+| **SMCChecks** | FULL | Recommended for accurate JIT detection. `MTrack` may be used in specific cases. |
+| **Multiblock** | 0 | Recommended to prevent JIT-related crashes. Enable `1` only if the game remains stable. |
 
 </details>
 
@@ -70,7 +82,7 @@
 | [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
-  <summary>💡Useful info</summary>
+  <summary>💡Basic Information</summary>
 <br> 
 
 | Type | 📝 |
@@ -81,7 +93,6 @@
 | **Mali-fix** | Fixes issues on Mali hardware. Since the latest wrapper includes the same fixes, it is not needed for recent Bionic builds |
 
 - In mobile environments, using the very latest version can actually lead to worse performance. (For now, anyway)
-- The LowLatency version is not included since it actually degrades performance.
 
 </details>
 
@@ -101,7 +112,7 @@
 
 
 <details>
-  <summary>💡Useful info</summary>
+  <summary>💡Basic Information</summary>
 <br> 
   
 | Type | 📝 |
@@ -127,7 +138,7 @@
 | [**XNA Framework**](https://download.microsoft.com/download/a/c/2/ac2c903b-e6e8-42c2-9fd7-bebac362a930/xnafx40_redist.msi) | xna40. Old indie games runtime |
 
 <details>
-  <summary>💡Useful info</summary>
+  <summary>💡Basic Information</summary>
 <br>
 
 - Install only the minimum necessary.
