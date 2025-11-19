@@ -180,7 +180,7 @@ jobs:
 
           tar --zstd --owner=0 --group=0 --sort=name -cf "artifacts/${FILENAME}" -C pkg profile.json box64
 
-          echo -e "- Target: aarch64 / Android ${API_LEVEL}\n- Patches: none\n- ${NOTES_STR}" > release_notes.md
+          echo -e "- Target: aarch64 / Android ${API_LEVEL}\n- ${NOTES_STR}" > release_notes.md
           
           echo "Updating Release: $REL_TAG"
           if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
