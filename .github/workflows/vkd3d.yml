@@ -9,7 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "Tag (e.g. v3.0). Empty = latest"
+        description: "Single tag allowed (v3.0a) Empty = Latest"
   schedule:
     - cron: "0 17 * * *"
 
