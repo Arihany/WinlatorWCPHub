@@ -99,7 +99,7 @@ jobs:
             VER_CODE="${DATECODE}"
             REL_TAG="$REL_TAG_NIGHTLY"
             REL_TITLE="WOWBOX64-NIGHTLY"
-            NOTES="Current version: ${DIST_VER}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
+            NOTES="Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
             FILENAME="wowbox64-${DIST_VER}.wcp"
           fi
 
