@@ -1,0 +1,265 @@
+name: DXVK
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "Multiple tags allowed (v2.4 v2.5.1) Empty = Latest"
+  schedule:
+    - cron: "0 17 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GH_TOKEN: ${{ github.token }}
+  DXVK_REPO: doitsujin/dxvk
+  REL_TAG: DXVK
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }} # mstorsjo
+  TOOLCHAIN_DIR: /opt/llvm-mingw
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  guard:
+    name: Check Update
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    outputs:
+      build: ${{ steps.check.outputs.missing }}
+      to_build: ${{ steps.check.outputs.list }}
+    steps:
+      - name: Detect & Check
+        id: check
+        env:
+          IN_VER: ${{ inputs.version }}
+          IS_SCHED: ${{ github.event_name == 'schedule' }}
+        run: |
+
+          # 1. Fetch Metadata
+          echo "Fetching tags from $DXVK_REPO..."
+          ALL_TAGS=$(gh api "repos/$DXVK_REPO/tags?per_page=100" --jq '.[].name')
+
+          echo "Fetching existing assets from $REL_TAG..."
+          EXISTING_ASSETS=$(gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)
+
+          # 2. Determine Targets
+          TARGET_LIST=""
+
+          if [[ "$IS_SCHED" == "true" || -z "$IN_VER" ]]; then
+            LATEST=$(echo "$ALL_TAGS" | grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?$' | sort -V | tail -n 1)
+            echo "Auto-detected latest version: $LATEST"
+            TARGET_LIST="$LATEST"
+          else
+            IFS=' ,' read -r -a INPUT_ARR <<< "$IN_VER"
+
+            for ver in "${INPUT_ARR[@]}"; do
+              [[ "$ver" != v* ]] && ver="v$ver"
+
+              if echo "$ALL_TAGS" | grep -Fxq "$ver"; then
+                TARGET_LIST="$TARGET_LIST $ver"
+              else
+                echo "::warning::Tag '$ver' not found in repository. Skipping."
+              fi
+            done
+          fi
+
+          # 3. Build Queue Generation
+          FINAL_LIST=""
+          HAS_WORK=false
+
+          echo "::group::Processing Targets"
+          for tag in $TARGET_LIST; do
+            base="${tag#v}"
+            filename="dxvk-${base}.wcp"
+
+            echo "Checking $tag (Artifact: $filename)..."
+
+            if echo "$EXISTING_ASSETS" | grep -qx "$filename"; then
+              echo "  -> Skipped (Already exists on Release)"
+            else
+              echo "  -> Queued for build"
+              FINAL_LIST+="$tag $base"$'\n'
+              HAS_WORK=true
+            fi
+          done
+          echo "::endgroup::"
+
+          # 4. Output
+          if [ "$HAS_WORK" = true ]; then
+            echo "missing=true" >> "$GITHUB_OUTPUT"
+            echo "list<<EOF" >> "$GITHUB_OUTPUT"
+            echo -e "$FINAL_LIST" >> "$GITHUB_OUTPUT"
+            echo "EOF" >> "$GITHUB_OUTPUT"
+            echo "Build queue created."
+          else
+            echo "missing=false" >> "$GITHUB_OUTPUT"
+            echo "list=" >> "$GITHUB_OUTPUT"
+            echo "Nothing to build."
+          fi
+
+  build:
+    name: Build & Release
+    needs: guard
+    if: needs.guard.outputs.build == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    permissions: { contents: write }
+    steps:
+      - name: Install Deps
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install --no-install-recommends \
+            curl xz-utils jq git glslang-tools build-essential python3-venv zstd \
+            dos2unix perl
+
+      - name: Setup Build Env
+        run: |
+          rm -rf src pkg_temp DXVK_WCP out .venv
+
+          # 1. Python Venv (Meson/Ninja)
+          python3 -m venv .venv
+          .venv/bin/pip install "meson==1.2.3" "ninja==1.11.1"
+          echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
+
+          # 2. llvm-mingw
+          gh release download "$LLVM_MINGW_TAG" -R mstorsjo/llvm-mingw \
+            -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm.tar.xz --clobber
+          sudo mkdir -p /opt/llvm-mingw
+          sudo tar -C /opt/llvm-mingw --strip-components=1 -xJf llvm.tar.xz
+          echo "/opt/llvm-mingw/bin" >> "$GITHUB_PATH"
+
+      - name: Clone DXVK
+        run: |
+          git clone --recurse-submodules "https://github.com/$DXVK_REPO.git" src
+          git -C src config user.name "Builder" && git -C src config user.email "bot@noreply"
+
+      - name: Build Loop
+        env:
+          TO_BUILD: ${{ needs.guard.outputs.to_build }}
+        run: |
+          mkdir -p out src/out
+          cd src
+          git fetch --tags --force
+          
+          # [Toolchain Inspection]
+          HAS_DEVINFO=false
+          if compgen -G "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d9types.h > /dev/null; then
+            if grep -q "_D3DDEVINFO_RESOURCEMANAGER" "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d9types.h; then
+              HAS_DEVINFO=true
+              echo "::notice::Toolchain has D3DDEVINFO. Will apply patches if needed."
+            fi
+          fi
+
+          while read -r tag base; do
+            [[ -n "$tag" ]] || continue
+            echo "::group::Building ${tag}"
+
+            # 1. Clean & Checkout
+            git reset --hard && git clean -fdx
+            git checkout -f "$tag" && git submodule update --init --recursive
+
+            # [Patch A] D3DDEVINFO Redefinition Fix
+            INC="src/d3d9/d3d9_include.h"
+            if [ "$HAS_DEVINFO" = true ] && [[ -f "$INC" ]] && grep -q "typedef struct _D3DDEVINFO_RESOURCEMANAGER" "$INC"; then
+              echo "Removing redefinition of D3DDEVINFO_RESOURCEMANAGER in $INC..."
+              perl -i -0777 -pe 's/typedef\s+struct\s+_D3DDEVINFO_RESOURCEMANAGER\s*\{.*?\}\s*D3DDEVINFO_RESOURCEMANAGER[^;]*;//s' "$INC"
+            fi
+
+            # [Patch B] UnmappedSubresource constexpr / ABI Fix
+            TEX="src/d3d11/d3d11_texture.h"
+            if [[ -f "$TEX" ]] && grep -q "UnmappedSubresource" "$TEX"; then
+              echo "Patching UnmappedSubresource in $TEX..."
+              perl -i -pe 's/static\s+(?:constexpr\s+)?D3D11_MAP\s+UnmappedSubresource\s*=.*/inline static const D3D11_MAP UnmappedSubresource = static_cast<D3D11_MAP>(-1);/' "$TEX"
+            fi
+
+            # Git Tagging for Meson
+            git config --global --add safe.directory "$(pwd)"
+            git tag -d "$tag" 2>/dev/null || true
+            git tag -a -f "$tag" -m "CI-Build"
+            
+            # 2. Build using upstream script
+            ../.venv/bin/meson --version || true
+
+            PKG_ROOT="../pkg_temp"
+            rm -rf "${PKG_ROOT}/dxvk-${tag}"
+            mkdir -p "$PKG_ROOT"
+
+            ./package-release.sh "$tag" "$PKG_ROOT" --no-package
+
+            # Restructure for WCP
+            SRC_ROOT="${PKG_ROOT}/dxvk-${tag}"
+            WCP_DIR="../DXVK_WCP"
+            rm -rf "$WCP_DIR" && mkdir -p "$WCP_DIR/system32" "$WCP_DIR/syswow64"
+
+            # Copy DLLs (DXVK package-release usually outputs x64 and x32)
+            [ -d "$SRC_ROOT/x64/bin" ] && CP_SRC_64="$SRC_ROOT/x64/bin" || CP_SRC_64="$SRC_ROOT/x64"
+            [ -d "$SRC_ROOT/x32/bin" ] && CP_SRC_86="$SRC_ROOT/x32/bin" || CP_SRC_86="$SRC_ROOT/x32"
+
+            # Fallback check if x32 is missing but x86 exists
+            if [ ! -d "$CP_SRC_86" ] && [ -d "$SRC_ROOT/x86" ]; then
+                CP_SRC_86="$SRC_ROOT/x86"
+            fi
+
+            cp "$CP_SRC_64"/*.dll "$WCP_DIR/system32/"
+            cp "$CP_SRC_86"/*.dll "$WCP_DIR/syswow64/"
+
+            if ! compgen -G "$WCP_DIR"/system32/*.dll > /dev/null && \
+               ! compgen -G "$WCP_DIR"/syswow64/*.dll > /dev/null; then
+              echo "::error::No DLLs copied into WCP layout. Check DXVK package paths."
+              exit 1
+            fi
+
+            # Strip
+            find "$WCP_DIR" -name '*.dll' -print0 | xargs -0 -r llvm-strip -s
+
+            # Generate Profile
+            jq -n \
+              --arg VER "$base" \
+              --arg DESC "Built on the Winlator WCP Hub (Upstream: doitsujin)" \
+              --slurpfile X64 <(ls "$WCP_DIR/system32" | jq -R '{source: ("system32/"+.), target: ("${system32}/"+.)}') \
+              --slurpfile X86 <(ls "$WCP_DIR/syswow64" | jq -R '{source: ("syswow64/"+.), target: ("${syswow64}/"+.)}') \
+              '{
+                type: "DXVK",
+                versionName: $VER,
+                versionCode: 0,
+                description: $DESC,
+                files: ($X64 + $X86)
+              }' > "$WCP_DIR/profile.json"
+
+            # Package
+            tar --zstd -C "$WCP_DIR" --format=gnu --owner=0 --group=0 --sort=name \
+              -cf "../out/dxvk-${base}.wcp" profile.json system32 syswow64
+            
+            echo "::endgroup::"
+          done <<< "$TO_BUILD"
+
+      - name: Release
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          NOTES="RELEASE_NOTES.md"
+          echo -e "- Architecture: x64 (system32) + x86 (syswow64)" > "$NOTES"
+          echo -e "- **General-purpose x64/x86 build**" >> "$NOTES"
+          
+          if compgen -G "out/dxvk-*.wcp" > /dev/null; then
+             LATEST=$(ls out/dxvk-*.wcp | sort -V | tail -n1 | sed -E 's/.*dxvk-(.*)\.wcp/\1/')
+             echo "- Current version: $LATEST" >> "$NOTES"
+             
+             if ! gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1; then
+               gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
+             else
+               gh release edit "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
+             fi
+             gh release upload "$REL_TAG" out/dxvk-*.wcp --repo "$REPO" --clobber
+          else
+             echo "No artifacts produced."
+          fi
