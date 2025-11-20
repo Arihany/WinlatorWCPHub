@@ -103,7 +103,7 @@ jobs:
             
             REL_TAG="$REL_TAG_NIGHTLY"
             REL_TITLE="BOX64-BIONIC-NIGHTLY"
-            NOTES="Current version: ${DIST_VER}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
+            NOTES="Current version: ${DEV_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
             FILENAME="box64-bionic-${DIST_VER}.wcp"
           fi
 
