@@ -14,7 +14,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "Stable tag (e.g. FEX-2502). Empty = latest"
+        description: "tag (e.g. FEX-2502). Empty = latest"
   schedule:
     - cron: "0 17 * * *"   # Daily Stable Check
     - cron: "30 17 * * *"  # Daily Nightly Check
