@@ -147,7 +147,6 @@ jobs:
             git submodule update --init --recursive
 
             # Build using upstream script
-            # --no-package: We handle packaging (WCP) ourselves
             ../.venv/bin/meson --version || true
             ./package-release.sh "$tag" "../pkg_temp" --no-package
 
