@@ -7,6 +7,9 @@ on:
         type: boolean
         default: false
         description: "Self-hosted"
+      version:
+        type: string
+        description: "VKD3D tag (e.g. v3.0a). Empty = latest"
   schedule:
     - cron: "0 17 * * *"
 
@@ -33,43 +36,64 @@ jobs:
       build:    ${{ steps.detect.outputs.missing }}
       to_build: ${{ steps.detect.outputs.list }}
     steps:
-      - name: Detect Missing Versions
+      - name: Detect Target Version
         id: detect
+        env:
+          IN_VERSION: ${{ inputs.version }}
+          IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
         run: |
-          # 1. Get Existing Versions (Local Release)
-          echo "Checking existing..."
-          gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null \
-            | sed -nE 's/^vkd3d-proton-arm64ec-(v?[0-9].*)\.wcp$/\1/p' | sort -V > existing.txt || touch existing.txt
+          get_latest_tag() {
+            gh api "repos/$VKD3D_REPO/tags?per_page=100" --jq '.[].name' \
+              | grep -E '^v[0-9]+\.[0-9]+' \
+              | sort -V \
+              | tail -n 1
+          }
 
-          # 2. Get Upstream Tags (>= 2.14.1)
-          echo "Fetching upstream..."
-          gh api "repos/$VKD3D_REPO/tags?per_page=100" --jq '.[].name' \
-            | grep -E '^v[0-9]+\.[0-9]+.*$' | sort -V > tags.txt
-
-          # Filter >= 2.14.1 using awk
-          awk '
-            function cmp(a,b, i,A,B){split(a,A,".");split(b,B,".");for(i=1;i<=3;i++){if((A[i]+0)<(B[i]+0))return -1;if((A[i]+0)>(B[i]+0))return 1}return 0}
-            { base=substr($0,2); if (cmp(base,"2.14.1")>=0) print $0 }
-          ' tags.txt > candidates.txt
-
-          # 3. Compare and Output
-          missing_list=""
-          while read -r tag; do
-            base="${tag#v}"
-            if ! grep -Fxq "$base" existing.txt; then
-              missing_list+="$tag $base"$'\n'
-            fi
-          done < candidates.txt
-
-          if [[ -n "$missing_list" ]]; then
-            echo "Found missing: $missing_list"
-            echo "list<<EOF" >> "$GITHUB_OUTPUT"
-            echo -n "$missing_list" >> "$GITHUB_OUTPUT"
-            echo "EOF" >> "$GITHUB_OUTPUT"
-            echo "missing=true" >> "$GITHUB_OUTPUT"
+          # 1. Resolve target tag (FEX-style: explicit or latest)
+          if [[ "$IS_SCHEDULE" == "true" ]]; then
+            TARGET_TAG="$(get_latest_tag)"
           else
-            echo "Up to date."
-            echo "missing=false" >> "$GITHUB_OUTPUT"
+            if [[ -n "$IN_VERSION" ]]; then
+              TARGET_TAG="$IN_VERSION"
+            else
+              TARGET_TAG="$(get_latest_tag)"
+            fi
+          fi
+
+          if [[ -z "$TARGET_TAG" ]]; then
+            echo "::warning::Failed to resolve target tag."
+            {
+              echo "missing=false"
+              echo "list="
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          BASE="${TARGET_TAG#v}"
+          FILENAME="vkd3d-proton-arm64ec-${BASE}.wcp"
+
+          echo "Target tag:  $TARGET_TAG"
+          echo "Base:        $BASE"
+          echo "Artifact:    $FILENAME"
+
+          # 2. Smart skip: check if this version is already built
+          ASSETS="$(gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" \
+                      --json assets --jq '.assets[].name' 2>/dev/null || true)"
+
+          if echo "$ASSETS" | grep -qx "$FILENAME"; then
+            echo "::notice::Asset $FILENAME already exists on $REL_TAG. Skipping."
+            {
+              echo "missing=false"
+              echo "list="
+            } >> "$GITHUB_OUTPUT"
+          else
+            echo "Will build $TARGET_TAG"
+            {
+              echo "missing=true"
+              echo "list<<EOF"
+              echo "$TARGET_TAG $BASE"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
           fi
 
   build:
@@ -117,6 +141,8 @@ jobs:
           git fetch --tags --force
 
           while read -r tag base; do
+            [[ -z "$tag" ]] && continue
+
             echo "::group::Building $tag (ARM64EC)"
             git reset --hard && git clean -fdx && git checkout -f "$tag"
             git submodule update --init --recursive
@@ -166,7 +192,7 @@ jobs:
               exit 1
             fi
 
-            # Generate Profile (Optimized with slurpfile)
+            # Generate Profile
             jq -n \
               --arg VER "arm64ec-$base" \
               --arg DESC "Built on the Winlator WCP Hub (Upstream: Hans-Kristian Arntzen)" \
