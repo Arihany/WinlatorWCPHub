@@ -9,7 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "VKD3D tag (e.g. v3.0). Empty = latest"
+        description: "tag (e.g. v3.0). Empty = latest"
   schedule:
     - cron: "0 17 * * *"
 
