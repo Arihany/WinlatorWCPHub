@@ -8,7 +8,7 @@ on:
         default: false
         description: "Self-hosted"
   schedule:
-    - cron: "0 18 * * *"
+    - cron: "0 17 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +18,11 @@ env:
   GH_TOKEN: ${{ github.token }}
   VKD3D_REPO: HansKristian-Work/vkd3d-proton
   REL_TAG: VKD3D-PROTON-ARM64EC
-  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }}
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }} # mstorsjo
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
 
 jobs:
   guard:
@@ -80,7 +84,8 @@ jobs:
         run: |
           sudo apt-get -yqq update
           sudo apt-get -yqq install --no-install-recommends \
-            curl xz-utils jq git glslang-tools build-essential python3-venv zstd
+            curl xz-utils jq git zstd \
+            ca-certificates python3-venv build-essential
 
       - name: Setup Build Env
         run: |
@@ -187,7 +192,9 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           NOTES="RELEASE_NOTES.md"
-          echo -e "🤖 Automated VKD3D-Proton-ARM64EC builds (2.14.1+)\n" > "$NOTES"
+          echo -e "- Architecture: ARM64EC (system32) + x86 (syswow64)" > "$NOTES"
+          echo -e "- **Exclusive for FEX**" >> "$NOTES"
+          echo -e "- 3.0a: Performance regression fix build" >> "$NOTES"
           
           if compgen -G "out/vkd3d-proton-arm64ec-*.wcp" > /dev/null; then
              LATEST=$(ls out/vkd3d-proton-arm64ec-*.wcp | sort -V | tail -n1 | sed -E 's/.*vkd3d-proton-arm64ec-(.*)\.wcp/\1/')

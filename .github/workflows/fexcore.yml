@@ -1,4 +1,4 @@
-name: FEXCore Stable + Weekly
+name: FEXCore Stable + Nightly
 
 on:
   workflow_dispatch:
@@ -6,7 +6,7 @@ on:
       channel:
         type: choice
         description: "Build channel"
-        options: [stable, weekly]
+        options: [stable, nightly]
         default: stable
       host:
         type: boolean
@@ -16,8 +16,8 @@ on:
         type: string
         description: "Stable tag (e.g. FEX-2502). Empty = latest"
   schedule:
-    - cron: "0 17 * * *"  # daily stable check
-    - cron: "0 18 * * 0"  # weekly build
+    - cron: "0 17 * * *"   # Daily Stable Check
+    - cron: "30 17 * * *"  # Daily Nightly Check
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -27,8 +27,12 @@ env:
   GH_TOKEN: ${{ github.token }}
   UPSTREAM_SLUG: FEX-Emu/FEX
   REL_TAG_STABLE: FEXCore
-  REL_TAG_WEEKLY: FEXCore-Nightly
-  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }}
+  REL_TAG_NIGHTLY: FEXCore-Nightly
+  LLVM_MINGW_TAG: ${{ vars.LLVM_MINGW_TAG || '20251118' }} # mstorsjo
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
 
 jobs:
   guard:
@@ -58,7 +62,8 @@ jobs:
           # 1. Determine Channel
           CHANNEL="${IN_CHANNEL:-stable}"
           if [[ "$IS_SCHEDULE" == "true" ]]; then
-            [[ "$SCHEDULE_CRON" == "0 18 * * 0" ]] && CHANNEL="weekly" || CHANNEL="stable"
+            # 17:30 schedule triggers Nightly
+            [[ "$SCHEDULE_CRON" == "30 17 * * *" ]] && CHANNEL="nightly" || CHANNEL="stable"
           fi
           echo "Selected channel: $CHANNEL"
 
@@ -81,7 +86,7 @@ jobs:
             FILENAME="FEXCore-${VER_NAME}.wcp"
 
           else 
-            # Weekly Logic
+            # Nightly Logic
             REF=$(gh api "repos/$UPSTREAM_SLUG/commits/HEAD" --jq .sha)
             SHORT="${REF:0:7}"
             DATECODE=$(date -u +%y%m%d)
@@ -93,20 +98,35 @@ jobs:
             DIST_VER="${BASE_VER}-${DATECODE}-${SHORT}"
             VER_NAME="${BASE_VER}"
             VER_CODE="${DATECODE}"
-            REL_TAG="$REL_TAG_WEEKLY"
-            REL_TITLE="FEXCore (Weekly)"
+            REL_TAG="$REL_TAG_NIGHTLY"
+            REL_TITLE="FEXCore-Nightly"
             NOTES="Current version: ${BASE_VER}-${DATECODE}-[${SHORT}](https://github.com/${UPSTREAM_SLUG}/commit/${REF})"
             FILENAME="FEXCore-${DIST_VER}.wcp"
           fi
 
-          # 3. Check Existence
-          # Check if asset exists in the release
-          if gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null | grep -qx "$FILENAME"; then
-            echo "::notice::Asset $FILENAME already exists. Skipping."
-            BUILD="false"
+          # 3. Check Existence (Smart Skip)
+          # Fetch all existing assets for the target release
+          ASSETS=$(gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>/dev/null || true)
+
+          if [[ "$CHANNEL" == "stable" ]]; then
+            # Stable: Exact match check
+            if echo "$ASSETS" | grep -qx "$FILENAME"; then
+              echo "::notice::Asset $FILENAME already exists. Skipping."
+              BUILD="false"
+            else
+              BUILD="true"
+            fi
           else
-            # Double check for Weekly: if the body contains the SHA, we might skip (optional, but safer to check asset)
-            BUILD="true"
+            # Nightly: Check exact file OR same commit hash
+            if echo "$ASSETS" | grep -qx "$FILENAME"; then
+              echo "::notice::Asset $FILENAME already exists (Same day re-run). Skipping."
+              BUILD="false"
+            elif echo "$ASSETS" | grep -q "\-${SHORT}\.wcp$"; then
+              echo "::notice::Commit $SHORT has already been built previously. Skipping."
+              BUILD="false"
+            else
+              BUILD="true"
+            fi
           fi
 
           # 4. Set Outputs
@@ -256,3 +276,32 @@ jobs:
           fi
           
           gh release upload "$REL_TAG" "artifacts/${FILENAME}" --repo "$GITHUB_REPOSITORY" --clobber
+
+      - name: Prune Old Assets
+        env:
+          KEEP: 10
+        run: |
+          # Only prune if this is the Nightly channel
+          if [[ "$REL_TAG" != "$REL_TAG_NIGHTLY" ]]; then
+            echo "Current release ($REL_TAG) is not Nightly. Skipping prune."
+            exit 0
+          fi
+
+          echo "Checking for old assets in $REL_TAG (keeping latest $KEEP)..."
+          
+          TO_DELETE=$(gh release view "$REL_TAG" --repo "$GITHUB_REPOSITORY" --json assets \
+            --jq ".assets
+                  | sort_by(.createdAt)
+                  | reverse
+                  | .[\$KEEP:][]?.name" \
+            --argjson KEEP "$KEEP" || true)
+
+          if [[ -z "$TO_DELETE" ]]; then
+            echo "No assets to prune."
+            exit 0
+          fi
+
+          for asset in $TO_DELETE; do
+            echo "Deleting old asset: $asset"
+            gh release delete-asset "$REL_TAG" "$asset" --repo "$GITHUB_REPOSITORY" -y || echo "Failed to delete $asset"
+          done
