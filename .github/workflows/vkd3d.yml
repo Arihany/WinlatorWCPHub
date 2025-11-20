@@ -167,7 +167,6 @@ jobs:
           NOTES="RELEASE_NOTES.md"
           echo -e "- Architecture: x64 (system32) + x86 (syswow64)" > "$NOTES"
           echo -e "- **General-purpose x64/x86 build**" >> "$NOTES"
-          echo -e "- 3.0a: Performance regression fix build" >> "$NOTES"
           
           if compgen -G "out/vkd3d-proton-*.wcp" > /dev/null; then
              LATEST=$(ls out/vkd3d-proton-*.wcp | sort -V | tail -n1 | sed -E 's/.*vkd3d-proton-(.*)\.wcp/\1/')
