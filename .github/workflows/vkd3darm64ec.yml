@@ -220,7 +220,6 @@ jobs:
           NOTES="RELEASE_NOTES.md"
           echo -e "- Architecture: ARM64EC (system32) + x86 (syswow64)" > "$NOTES"
           echo -e "- **Exclusive for FEX**" >> "$NOTES"
-          echo -e "- 3.0a: Performance regression fix build" >> "$NOTES"
           
           if compgen -G "out/vkd3d-proton-arm64ec-*.wcp" > /dev/null; then
              LATEST=$(ls out/vkd3d-proton-arm64ec-*.wcp | sort -V | tail -n1 | sed -E 's/.*vkd3d-proton-arm64ec-(.*)\.wcp/\1/')
