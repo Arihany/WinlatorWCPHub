@@ -80,7 +80,7 @@
 |-|:-:|:-:|
 | [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> 2.7.1| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
 | [**`DXVK-GPLAsync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> 2.7.1-1| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
-| [**`DXVK-Sarek-Async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) [**`Mali-fix`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-MALIFIX)| <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
+| [**`DXVK-Sarek-Async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) | <!--sarek--> 1.11.0| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
 | [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`ARM64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> 3.0|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 <details>
@@ -92,7 +92,6 @@
 | **Sarek**    | Backports for older Vulkan. Keeps DXVK usable on Vulkan 1.1 hardware, with practical tweaks for legacy GPUs |
 | **GPLAsync** | DXVK + GPL cache + Async shader compilation to cut visible stutter during compilation |
 | **ARM64EC**  | Designed to run with ```FEXCore``` to minimize translation and reduce overhead |
-| **Mali-fix** | Fixes issues on Mali hardware. Since the latest wrapper includes the same fixes, it is not needed for recent Bionic builds |
 
 - In mobile environments, using the very latest version can actually lead to worse performance. (For now, anyway)
 
