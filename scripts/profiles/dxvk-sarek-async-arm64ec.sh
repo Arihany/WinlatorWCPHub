@@ -1,0 +1,4 @@
+WCP_TYPE="DXVK"
+WCP_DESC="Built on the Winlator WCP Hub (Upstream: pythonlover02)"
+WCP_VERSION_CODE_DEFAULT=0
+WCP_VERSION_PREFIX="async-arm64ec-"
