@@ -68,8 +68,9 @@ This repo just got a full refresh for no reason! 🎉
 </details>
 
 <details>
-<summary>🧐 <b>UNITY SETTINGS</b></summary>
-<br>
+<summary>🧐 $\color{green}{\texttt{UNITY SETTINGS}}$</summary>
+
+---
 
 <h3>🧠 Unity scripting backends</h3>
 
