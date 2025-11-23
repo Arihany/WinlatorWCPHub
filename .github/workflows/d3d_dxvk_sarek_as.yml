@@ -102,7 +102,7 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout                              async branch
+              # 1. Clean & Checkout                               async branch
               git reset --hard
               git clean -fdx
               
@@ -113,7 +113,7 @@ jobs:
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patch &                               NO Clean Git Status
+              # 2. Apply Patch
               bash ../scripts/patches/dxvk.sh .
 
               # 3. Build (Upstream)
