@@ -156,6 +156,6 @@ jobs:
             exit 0
           fi
 
-          git commit -m "ci(readme): bump versions (purrser)"
+          git commit -m "ci(readme): bump versions 😻"
           git push origin main
 
