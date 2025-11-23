@@ -51,7 +51,7 @@ jobs:
           {
             "fex":      "FEXCore",
             "dxvk":     "DXVK",
-            "sarek":    "DXVK-SAREK",
+            "sarek":    "DXVK-SAREK-ASYNC",
             "gplasync": "DXVK-GPLASYNC",
             "vkd3d":    "VKD3D-PROTON",
             "box64":    "BOX64-BIONIC"
