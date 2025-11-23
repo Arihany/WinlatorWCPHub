@@ -10,7 +10,7 @@
 
 This repo just got a full refresh for no reason! 🎉
 
-Enjoy the new useful bits and the completely unnecessary freshly rebuilt files!
+<sup>Enjoy the new useful bits and the completely unnecessary freshly rebuilt files!</sup>
 
 ---
 
