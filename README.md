@@ -8,6 +8,12 @@
 
 ---
 
+This repo just got a full refresh for no reason! 🎉
+
+Enjoy the new useful bits and the completely unnecessary freshly rebuilt files!
+
+---
+
 > [!TIP]
 > <details>
 >  <summary><b>What exactly is Winlator-Bionic?</b></summary>
