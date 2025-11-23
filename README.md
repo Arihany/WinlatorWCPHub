@@ -86,16 +86,16 @@ This repo just got a full refresh for no reason! 🎉
 
 | Box64 | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
-| **STRONGMEM** | 1+ | Req | Uses safer memory ordering |
+| **STRONGMEM** | 1+ | Req | Uses safer memory ordering. |
 | **BIGBLOCK** | 2 | Rec | Uses small JIT blocks for stability. Lower values are more stable but slower. |
-| **CALLRET** | 0 | Rec | Protects the call stack from broken JIT code. |
+| **CALLRET** | 0+ | Rec | Protects the call stack from broken JIT code. |
 | **WEAKBARRIER** | 1+ | Opt | Reduces the performance cost of `STRONGMEM`. Disable if the game crashes. |
 
 | FEXCore | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
 | **TSOEnabled** | 1 | Req | Uses safer memory ordering. Requires hardware TSO support. |
 | **SMCChecks** | FULL | Rec | Fully checks JIT code changes. Use `MTrack` only if `FULL` is too slow. |
-| **Multiblock** | 0 | Rec | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable. |
+| **Multiblock** | 0+ | Rec | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable. |
 
 </details>
 
