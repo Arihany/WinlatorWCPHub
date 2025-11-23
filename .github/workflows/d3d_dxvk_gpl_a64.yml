@@ -1,0 +1,220 @@
+name: d3d-dxvk-gplasync-arm64ec
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "(e.g. v2.4-1, v2.7.1-1). Empty = auto"
+
+  schedule:
+    - cron: "0 17 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN:       ${{ github.token }}
+  UNI_KIND:       dxvk-gplasync-arm64ec
+  REL_TAG_STABLE: DXVK-GPLASYNC-ARM64EC
+  UPSTREAM_REPO:  doitsujin/dxvk
+  GITLAB_REPO:    Ph42oN/dxvk-gplasync
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  guard:
+    name: Build Guard
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    env:
+      IN_CHANNEL:  stable
+      IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+    outputs:
+      missing: ${{ steps.check.outputs.missing }}
+      list:    ${{ steps.check.outputs.list }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check Upstream & Queue
+        id: check
+        run: bash ./scripts/guard.sh
+
+  build:
+    name: Build & Pack
+    needs: guard
+    if: needs.guard.outputs.missing == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    env:
+      GPLASYNC_BASE_URL: https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Deps
+        run: bash ./scripts/install-deps-ubuntu.sh
+
+      - name: Setup Build Env (Meson + llvm-mingw)
+        run: bash ./scripts/setup-llvm-meson.sh
+
+      - name: Clone Source
+        run: |
+          git clone "https://github.com/$UPSTREAM_REPO.git" src
+          git -C src config user.name "Builder"
+          git -C src config user.email "bot@noreply"
+
+      - name: Build Loop
+        env:
+          TO_BUILD: ${{ needs.guard.outputs.list }}
+          DXVK_GPL_SUFFIX: "-Arm64EC"
+        run: |
+          mkdir -p _logs out src/out patches
+
+          cd src
+          git fetch --tags --force
+
+          while IFS='|' read -r kind channel ref ver_name ver_code rel_tag rel_title filename short; do
+            [[ -n "$kind" ]] || continue
+
+            if [[ -z "$ref" ]]; then
+              echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
+              continue
+            fi
+
+            DXVK_BASE="${ver_name%-*}"    # -> "2.7.1"
+            GPL_REV="${ver_name##*-}"     # -> "1"
+            
+            GPL_TAG="${ref}"              # v2.7.1-1
+            DXVK_REF="v${DXVK_BASE}"      # v2.7.1
+
+            LOG_PATH="../_logs/${UNI_KIND}-${DXVK_BASE}-${GPL_REV}.log"
+
+            {
+              echo "::group::Building ${GPL_TAG} (dxvk ${DXVK_REF}, rev ${GPL_REV})"
+
+              # 1. Clean & Checkout
+              git reset --hard
+              git clean -fdx
+              git checkout -f "$DXVK_REF"
+
+              # 1.1 Submodule
+              git submodule sync --recursive
+              git submodule update --init --recursive
+
+              # 2. Apply Patches & Build
+              bash ../scripts/patches/dxvk.sh .
+
+              PATCH_NAME="dxvk-gplasync-${DXVK_BASE}-${GPL_REV}.patch"
+              PATCH_LOCAL="../patches/${PATCH_NAME}"
+              
+              echo "Downloading GPLAsync patch: ${PATCH_NAME}"
+              curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"
+              
+              # Arm64EC tag
+              if [[ -n "${DXVK_GPL_SUFFIX:-}" ]]; then
+                echo "Rewriting GPLAsync dirty suffix -> -1-gplasync${DXVK_GPL_SUFFIX}"
+                sed -i "s/--dirty=-1-gplasync'/--dirty=-1-gplasync${DXVK_GPL_SUFFIX}'/g" "$PATCH_LOCAL" || true
+                sed -i "s/--dirty=-1-gplasync\"/--dirty=-1-gplasync${DXVK_GPL_SUFFIX}\"/g" "$PATCH_LOCAL" || true
+              fi
+              
+              patch -p1 < "${PATCH_LOCAL}"
+
+              # 3. Build Process (Custom for ARM64EC)
+              ../.venv/bin/meson --version || true
+              PKG_ROOT="../pkg_temp/${UNI_KIND}-${ref}"
+              rm -rf "${PKG_ROOT}"
+              mkdir -p "${PKG_ROOT}"
+
+              rm -rf build_x86 build_ec
+
+              # 3-1. Build x86 (Standard 32-bit)
+              echo "Compiling x86 (32-bit)..."
+              meson setup build_x86 \
+                --cross-file build-win32.txt \
+                --buildtype release \
+                --prefix "$PWD/${PKG_ROOT}/x32"
+              ninja -C build_x86 install
+
+              # 3-2. Build ARM64EC (Replaces x64)
+              echo "Compiling ARM64EC..."
+              meson setup build_ec \
+                --cross-file ../toolchains/arm64ec.meson.ini \
+                --buildtype release \
+                --prefix "$PWD/${PKG_ROOT}/arm64ec"
+              ninja -C build_ec install
+
+              # 4. Resolve source dirs
+              WCP_DIR="../${REL_TAG_STABLE}_WCP"
+              rm -rf "$WCP_DIR"
+
+              SRC_EC="${PKG_ROOT}/arm64ec"
+              SRC_32="${PKG_ROOT}/x32"
+
+              # Prefer /bin subfolder if present
+              if [[ -d "$SRC_EC/bin" ]]; then
+                SRC_EC="$SRC_EC/bin"
+              fi
+
+              if [[ -d "$SRC_32/bin" ]]; then
+                SRC_32="$SRC_32/bin"
+              fi
+
+              # 5. Pack WCP
+              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
+              bash ../scripts/packing.sh \
+                "$SRC_EC" \
+                "$SRC_32" \
+                "$WCP_DIR" \
+                "$ver_name" \
+                "../out/${filename}"
+
+              echo "::endgroup::"
+            } 2>&1 | tee "$LOG_PATH"
+
+          done <<< "$TO_BUILD"
+
+      - name: Process Logs
+        if: always()
+        run: bash ./scripts/log.sh _logs/*.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.REL_TAG_STABLE }}-logs
+          path: _logs/
+
+      - name: Release
+        env:
+          REPO:           ${{ github.repository }}
+          REL_TAG:        ${{ env.REL_TAG_STABLE }} 
+          VERSION_PREFIX: "${{ env.UNI_KIND }}-"
+          ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
+          BODY: |
+            - Architecture: Arm64EC (system32) + x86 (syswow64)
+            - **Exclusive to FEX**
+        run: bash ./scripts/release.sh
+
+  bump-readme:
+    needs: build
+    uses: ./.github/workflows/chore_purrrser.yml
+    secrets: inherit

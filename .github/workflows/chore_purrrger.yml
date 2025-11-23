@@ -1,0 +1,96 @@
+#  /\_/\
+# (=•ᆽ•=)づ✂
+
+name: chore-purrrger
+
+on:
+  schedule:
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+    inputs:
+      keep:
+        type: number
+        default: 10
+        description: "cutcutcut"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN: ${{ github.token }}
+
+jobs:
+  prune-nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Prune nightly release assets
+        env:
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          KEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.keep || 10 }}
+        run: |
+          set -Eeuo pipefail
+
+          REPO="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY not set}"
+          KEEP="${KEEP:-10}"
+
+          echo "Repository : $REPO"
+          echo "Keep       : $KEEP assets per nightly release"
+          echo
+
+          nightly_tags="$(
+            gh release list \
+              --repo "$REPO" \
+              --limit 100 \
+              --json tagName \
+              --jq '.[] | select(.tagName | test("nightly"; "i")) | .tagName'
+          )"
+
+          if [[ -z "$nightly_tags" ]]; then
+            echo "No releases with 'nightly' in tagName found. Nothing to prune."
+            exit 0
+          fi
+
+          echo "Nightly-like releases found:"
+          echo "$nightly_tags"
+          echo
+
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+
+            echo "::group::Pruning assets for release tag: $tag"
+
+            to_delete="$(
+              gh release view "$tag" --repo "$REPO" \
+                --json assets \
+                --jq ".assets
+                      | sort_by(.createdAt)
+                      | reverse
+                      | .[$KEEP:][]?.name" \
+              || true
+            )"
+
+            if [[ -z "$to_delete" ]]; then
+              echo "No assets to delete for $tag (<= $KEEP assets)."
+              echo "::endgroup::"
+              continue
+            fi
+
+            echo "Assets to delete for $tag:"
+            echo "$to_delete"
+            echo
+
+            while IFS= read -r asset; do
+              [[ -z "$asset" ]] && continue
+              echo "Deleting asset: $asset"
+              gh release delete-asset "$tag" "$asset" --repo "$REPO" -y \
+                || echo "Failed to delete asset: $asset (ignored)"
+            done <<< "$to_delete"
+
+            echo "::endgroup::"
+          done <<< "$nightly_tags"
