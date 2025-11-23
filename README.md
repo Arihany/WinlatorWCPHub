@@ -21,9 +21,9 @@ This repo just got a full refresh for no reason! 🎉
 >
 > | Bionic builds | 📝 |
 > |:-:|-|
-> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support |
-> | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly integrates the latest upstream code while remaining close to vanilla |
-> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Rapidly integrates the latest upstream code, combines CMod features with additional QOL improvements |
+> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
+> | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Rapidly integrates the latest upstream code while remaining close to vanilla. |
+> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Rapidly integrates the latest upstream code, combines CMod features with additional QOL improvements. |
 >
 >  ---
 >
@@ -59,9 +59,9 @@ This repo just got a full refresh for no reason! 🎉
 
 | Type | 📝 |
 |:-:|-|
-| **FEXCore** | Focuses on accuracy and modern titles. Delivers native-like performance on high-end systems by leveraging Arm64EC architecture and hardware features like TSO |
-| **Box64** | Renowned for speed and flexibility. Excellent for older titles or optimizing performance on specific hardware through extensive Dynarec customization |
-| **WowBox64** | A 32-bit x86 Windows guest library that is loaded inside the Wine environment. It thunks 32-bit Windows API calls to the 64-bit host |
+| **FEXCore** | Focuses on accuracy and modern titles. Delivers native-like performance on high-end systems by leveraging Arm64EC architecture and hardware features like TSO. |
+| **Box64** | Renowned for speed and flexibility. Excellent for older titles or optimizing performance on specific hardware through extensive Dynarec customization. |
+| **WowBox64** | A 32-bit x86 Windows guest library that is loaded inside the Wine environment. It thunks 32-bit Windows API calls to the 64-bit host. |
 
 ---
 
@@ -74,11 +74,11 @@ This repo just got a full refresh for no reason! 🎉
 
 <h3>🧠 Unity scripting backends</h3>
 
-| Backend | 🏷️ | 🔍 | 📝 |
-|:-:|:-:|:-:|-|
-| **Old Mono** | ❌ | Single large `UnityEngine.dll` | Technically possible, practically not worth the trouble. |
-| **Modern Mono** | 🟡 | `Assembly-CSharp.dll` | Most Unity games use this. Performance can dip, but it runs. |
-| **IL2CPP** | 🟢 | `GameAssembly.dll` | Performs well and safely tolerates more aggressive settings |
+| Backend | 🔍 | 📝 |
+|:-:|:-:|-|
+| **Old Mono** | Single large `UnityEngine.dll` | ❌ Technically possible, practically not worth the trouble. |
+| **Mono** | `Assembly-CSharp.dll` | 🟡 Most Unity games use this. Performance can dip, but it runs. |
+| **IL2CPP** | `GameAssembly.dll` | 🟢 Performs well and safely tolerates more aggressive settings. |
 
 ---
 
@@ -86,16 +86,16 @@ This repo just got a full refresh for no reason! 🎉
 
 | Box64 | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
-| **STRONGMEM** | 1+ | Essential | Uses safer memory ordering |
-| **BIGBLOCK** | 2 | Recommended | Uses small JIT blocks for stability. Lower values are more stable but slower |
-| **CALLRET** | 0 | Recommended | Protects the call stack from broken JIT code |
-| **WEAKBARRIER** | 1+ | Optional | Reduces the performance cost of `STRONGMEM`. Disable if the game crashes |
+| **STRONGMEM** | 1+ | Req | Uses safer memory ordering |
+| **BIGBLOCK** | 2 | Rec | Uses small JIT blocks for stability. Lower values are more stable but slower. |
+| **CALLRET** | 0 | Rec | Protects the call stack from broken JIT code. |
+| **WEAKBARRIER** | 1+ | Opt | Reduces the performance cost of `STRONGMEM`. Disable if the game crashes. |
 
 | FEXCore | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
-| **TSOEnabled** | 1 | Essential | Uses safer memory ordering. Requires hardware TSO support |
-| **SMCChecks** | FULL | Recommended | Fully checks JIT code changes. Use `MTrack` only if `FULL` is too slow |
-| **Multiblock** | 0 | Recommended | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable |
+| **TSOEnabled** | 1 | Req | Uses safer memory ordering. Requires hardware TSO support. |
+| **SMCChecks** | FULL | Rec | Fully checks JIT code changes. Use `MTrack` only if `FULL` is too slow. |
+| **Multiblock** | 0 | Rec | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable. |
 
 </details>
 
@@ -116,9 +116,9 @@ This repo just got a full refresh for no reason! 🎉
 
 | Type | 📝 |
 |:-:|-|
-| **Sarek**    | DXVK fork that backports QOL patches and fixes to the 1.10.x branch |
-| **gplsync** | gpl cache + async shader compilation to cut visible stutter during compilation |
-| **Arm64EC**  | Intended to be used with ```FEXCore``` to minimize translation and reduce overhead |
+| **Sarek**    | DXVK fork that backports QOL patches and fixes to the 1.10.x branch. |
+| **gplsync** | gpl cache + async shader compilation to cut visible stutter during compilation. |
+| **Arm64EC**  | Intended to be used with ```FEXCore``` to minimize translation and reduce overhead. |
 
 - In mobile environments, using the very latest version can actually lead to worse performance. (For now, anyway)
 
@@ -136,9 +136,9 @@ This repo just got a full refresh for no reason! 🎉
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
-| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx) |
+| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx. |
+| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx. |
+| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx). |
 
 
 <details>
@@ -147,8 +147,8 @@ This repo just got a full refresh for no reason! 🎉
   
 | Type | 📝 |
 |:-:|-|
-| **Qualcomm driver**    | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches |
-| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices |
+| **Qualcomm driver**    | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches. |
+| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. |
 
 </details>
 
