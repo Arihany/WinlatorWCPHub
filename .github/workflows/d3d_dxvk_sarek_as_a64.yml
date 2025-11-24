@@ -197,7 +197,7 @@ jobs:
           BODY: |
             - Architecture: Arm64EC (system32) + x86 (syswow64)
             - **Exclusive to FEX**
-            - **Patched: NEON-backed SSE shim**
+            - **Patched: NEON-backed SSE & Native Bitops**
         run: bash ./scripts/release.sh
 
   bump-readme:
