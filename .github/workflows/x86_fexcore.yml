@@ -220,7 +220,6 @@ jobs:
           VERSION_PREFIX: "FEXCore-" # Hardcoded on purpose due to an earlier tag naming mistake
           BODY: |
             - Architecture: ARM64 host (Wine / MinGW) + 64-bit x86 guest
-            - **Exclusive for Bionic**
         run: bash ./scripts/release.sh
 
   bump-readme:
