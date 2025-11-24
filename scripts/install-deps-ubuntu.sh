@@ -28,4 +28,6 @@ $SUDO apt-get -yqq install --no-install-recommends \
   perl \
   tar \
   unzip \
-  llvm
+  llvm \
+  gcc-aarch64-linux-gnu \
+  binutils-aarch64-linux-gnu
