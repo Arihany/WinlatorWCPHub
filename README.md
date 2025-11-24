@@ -86,22 +86,22 @@ This repo just got a full refresh for no reason! 🎉
 
 | Box64 | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **SAFEFLAGS** | 1 | Higher values usually do not help. |
-| **STRONGMEM** | 1 | Higher values usually do not help. |
-| **BIGBLOCK** | 2 | Lower values are more stable. Official recommendation is `0` but `2` is usually still safe. |
-| **WEAKBARRIER** | 1 | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
-| **CALLRET** | 0 | `1` might help performance, but the gain is modest. |
-| **WAIT** | 1 | `0` can improve performance but may cause instability. |
-| **DIRTY** | 0 | Keep as is. |
-| **MMAP32** | 1 | Good for performance. Set to `0` only if it clearly causes issues. |
+| **SAFEFLAGS** | `1` | Higher values usually do not help. |
+| **STRONGMEM** | `1` | Higher values usually do not help. |
+| **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
+| **BIGBLOCK** | `2` | Lower values are more stable. Official recommendation is `0` but `2` is usually still safe. |
+| **CALLRET** | `0` | `1` might help performance, but the gain is modest. |
+| **WAIT** | `1` | `0` can improve performance but may cause instability. |
+| **DIRTY** | `0` | Keep as is. |
+| **MMAP32** | `1` | Good for performance. Set to `0` only if it clearly causes issues. |
 
 | FEXCore | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **TSOEnabled** | 1 | Required for many Unity games. You can test `0` to improve performance. |
-| **SMCChecks** | MTrack | Keep as is. |
-| **Multiblock** | 0 | Set to `1` only if the game is already stable and you want more performance. |
-| **HalfBarrierTSOEnabled** | 1 | Reduces the performance cost of TSO. Set to `0` if the game crashes or freezes. |
-| **X87ReducedPrecision** | 1 | Set to `0` for older titles or if subtle bugs occur. |
+| **TSOEnabled** | `1` | Required for many Unity games. You can test `0` to improve performance. |
+| **HalfBarrierTSOEnabled** | `1` | Reduces the performance cost of TSO. Set to `0` if the game crashes or freezes. |
+| **Multiblock** | `0` | Set to `1` only if the game is already stable and you want more performance. |
+| **SMCChecks** | `MTrack` | Keep as is. |
+| **X87ReducedPrecision** | `1` | Set to `0` for older titles or if subtle bugs occur. |
 
 </details>
 
