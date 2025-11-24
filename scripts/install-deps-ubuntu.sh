@@ -29,5 +29,4 @@ $SUDO apt-get -yqq install --no-install-recommends \
   tar \
   unzip \
   llvm \
-  gcc-aarch64-linux-gnu \
-  binutils-aarch64-linux-gnu
+  crossbuild-essential-arm64
