@@ -121,7 +121,7 @@
 
 | Type | 📝 |
 |:-:|-|
-| **Sarek**    | A modernized fork of DXVK 1.10x. Features backported fixes for enhanced stability on legacy GPUs with limited Vulkan support. |
+| **Sarek**    | A modernized fork of DXVK 1.10.x. Features backported fixes for enhanced stability on legacy GPUs with limited Vulkan support. |
 | **gplasync** | gpl cache + async shader compilation to cut visible stutter during compilation. |
 | **Arm64EC**  | Intended to be used with ```FEXCore``` to minimize translation and reduce overhead. |
 
