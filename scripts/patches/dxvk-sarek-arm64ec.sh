@@ -18,6 +18,24 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
   exit 1
 fi
 
+
+# Mode
+MODE="${DXVK_SAREK_MODE:-arm64ec}"
+TAGGING=1
+
+case "$MODE" in
+  arm64ec)
+    TAGGING=1
+    ;;
+  common)
+    TAGGING=0
+    ;;
+  *)
+    echo "::error::Unknown DXVK_SAREK_MODE='$MODE' (expected: arm64ec, common)" >&2
+    exit 1
+    ;;
+esac
+
 echo "== Sarek ARM64EC patch start (Precision Mode) =="
 
 if [[ ! -f "$REAL_SHIM_SRC" ]]; then
@@ -238,9 +256,10 @@ fi
 # ---------------------------------------------------------------------------
 # 5) meson.build & version.h.in (Tagging)
 # ---------------------------------------------------------------------------
-MESON_FILE="$ROOT/meson.build"
-if [[ -f "$MESON_FILE" ]]; then
-  "$PYTHON" - "$MESON_FILE" <<'PY'
+if [[ "$TAGGING" -eq 1 ]]; then
+  MESON_FILE="$ROOT/meson.build"
+  if [[ -f "$MESON_FILE" ]]; then
+    "$PYTHON" - "$MESON_FILE" <<'PY'
 import sys, pathlib
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -249,11 +268,11 @@ if "--dirty=-async'" in text:
     path.write_text(text, encoding="utf-8")
     print("[OK] meson.build updated")
 PY
-fi
+  fi
 
-VER_IN="$ROOT/version.h.in"
-if [[ -f "$VER_IN" ]]; then
-  "$PYTHON" - "$VER_IN" <<'PY'
+  VER_IN="$ROOT/version.h.in"
+  if [[ -f "$VER_IN" ]]; then
+    "$PYTHON" - "$VER_IN" <<'PY'
 import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -264,6 +283,7 @@ if m and 'arm64ec' not in m.group(2).lower():
     path.write_text(new_text, encoding="utf-8")
     print(f"[OK] version.h.in -> {new_body}")
 PY
+  fi
 fi
 
 export MOCK_DIR
