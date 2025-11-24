@@ -97,7 +97,7 @@
 | FEXCore | 🏷️ | 📝 |
 |:-:|:-:|-|
 | **TSOEnabled** | `1` | Required for many Unity games. You can test `0` to improve performance. |
-| **HalfBarrierTSOEnabled** | `1` | Reduces the performance cost of TSO. Set to `0` if the game crashes or freezes. |
+| **HalfBarrierTSOEnabled** | `1` | Keep enabled for correctness. Set to `0` only for experimental performance tuning. |
 | **Multiblock** | `0` | Set to `1` only if the game is already stable and you want more performance. |
 | **SMCChecks** | `MTrack` | Keep as is. Higher values are usually too slow to be worth it. |
 | **X87ReducedPrecision** | `1` | Set to `0` for older titles or if subtle bugs occur. |
