@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -Eeuo pipefail
 
 ROWS="${ROWS:-}"
@@ -13,20 +14,19 @@ matrix_json=$(
     split("\n")
     | map(select(length > 0))
     | map(
-        split("|")
+        (split("|")) as $cols
         | {
-            kind:      .[0],
-            channel:   .[1],
-            ref:       .[2],
-            ver_name:  .[3],
-            ver_code:  .[4],
-            rel_tag:   .[5],
-            rel_title: .[6],
-            filename:  .[7],
-            short:     .[8]
+            kind:      $cols[0],
+            channel:   $cols[1],
+            ref:       $cols[2],
+            ver_name:  $cols[3],
+            ver_code:  $cols[4],
+            rel_tag:   $cols[5],
+            filename:  $cols[6],
+            short:     $cols[7]
           }
       )
-    | {include: .}
+    | { include: . }
   '
 )
 

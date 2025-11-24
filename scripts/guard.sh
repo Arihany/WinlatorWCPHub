@@ -1,5 +1,8 @@
+#!/bin/bash
+
 #  /\_/\
 # (=•ᆽ•=)づ︻╦╤─
+# Refactored for DRY & Readability
 
 set -Eeuo pipefail
 
@@ -28,34 +31,22 @@ trap 'rm -rf "$TMP_DIR"' EXIT
 # 0.5 Ensure required tools (jq, curl)
 # -----------------------------------------------------------------------------
 ensure_base_tools() {
-  local need_jq=false
-  local need_curl=false
-
-  command -v jq >/dev/null 2>&1   || need_jq=true
-  command -v curl >/dev/null 2>&1 || need_curl=true
-
-  if ! $need_jq && ! $need_curl; then
-    return 0
-  fi
+  command -v jq >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && return 0
 
   if ! command -v apt-get >/dev/null 2>&1; then
-    echo "::error::Missing required tools (jq/curl) and no apt-get available on this runner." >&2
+    echo "::error::Missing required tools (jq/curl) and no apt-get available." >&2
     exit 1
   fi
 
   echo "Installing required tools (jq/curl)..." >&2
 
-  if command -v sudo >/dev/null 2>&1; then
-    sudo apt-get -yq update
-    if $need_jq;   then sudo apt-get -yq install --no-install-recommends jq;   fi
-    if $need_curl; then sudo apt-get -yq install --no-install-recommends curl; fi
-    sudo apt-get -yq install --no-install-recommends ca-certificates
-  else
-    apt-get -yq update
-    if $need_jq;   then apt-get -yq install --no-install-recommends jq;   fi
-    if $need_curl; then apt-get -yq install --no-install-recommends curl; fi
-    apt-get -yq install --no-install-recommends ca-certificates
-  fi
+  # Helper to run with sudo if available
+  run_as_root() {
+    if command -v sudo >/dev/null 2>&1; then sudo "$@"; else "$@"; fi
+  }
+
+  run_as_root apt-get -yq update
+  run_as_root apt-get -yq install --no-install-recommends jq curl ca-certificates
 }
 
 ensure_base_tools
@@ -77,73 +68,100 @@ get_assets_cached() {
   local tag_var="REL_TAG_${channel^^}"
   local release_tag="${!tag_var:-}"
 
-  if [[ -z "$release_tag" ]]; then
-    ASSET_CACHE[$channel]=""
-    return 0
-  fi
+  [[ -z "$release_tag" ]] && { ASSET_CACHE[$channel]=""; return 0; }
 
-  if [[ ! -v 'ASSET_CACHE[$channel]' ]]; then
+  if [[ ! -v ASSET_CACHE[$channel] ]]; then
     local out err_file="$TMP_DIR/gh_assets_${channel}.err"
     if ! out="$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" \
               --json assets --jq '.assets[].name' 2> "$err_file")"; then
       local err
       err="$(<"$err_file" 2>/dev/null || true)"
-
-      if grep -qiE "release not found|could not resolve to a release|404" <<< "$err"; then
-        echo "::notice::Release '$release_tag' not found on $GITHUB_REPOSITORY (treating as empty asset set)" >&2
+      if grep -qiE "release not found|could not resolve|404" <<< "$err"; then
+        echo "::notice::Release '$release_tag' not found (treating as empty)." >&2
         out=""
       else
-        echo "::warning::Failed to fetch assets for '$release_tag' on $GITHUB_REPOSITORY; assuming no assets exist." >&2
+        echo "::warning::Failed to fetch assets for '$release_tag'." >&2
         [[ -n "$err" ]] && echo "$err" >&2
         out=""
       fi
     fi
-
     ASSET_CACHE[$channel]="$out"
   fi
-
   printf '%s\n' "${ASSET_CACHE[$channel]}"
 }
 
-# Generic GitHub Tag Fetcher
 fetch_github_tags() {
-  # Returns list of tags line by line
   gh api "repos/$UPSTREAM_REPO/tags?per_page=100" --paginate --jq '.[].name' 2>/dev/null || true
 }
 
 get_upstream_head_sha() {
   local sha
   sha="$(gh api "repos/$UPSTREAM_REPO/commits/HEAD" --jq .sha 2>/dev/null || true)"
-  if [[ -z "$sha" ]]; then
-    echo "::error::Failed to fetch HEAD SHA for $UPSTREAM_REPO" >&2
-    exit 1
-  fi
+  [[ -z "$sha" ]] && { echo "::error::Failed to fetch HEAD SHA for $UPSTREAM_REPO" >&2; exit 1; }
   echo "$sha"
 }
 
-get_datecode() {
-  date -u +%y%m%d
-}
+get_datecode() { date -u +%y%m%d; }
 
 check_github_tag_exists() {
   local tag="$1"
   local err_file="$TMP_DIR/tag_check.err"
-
   if gh api "repos/$UPSTREAM_REPO/git/ref/tags/$tag" --silent >/dev/null 2> "$err_file"; then
     return 0
   fi
-
+  
   local err
   err="$(<"$err_file" 2>/dev/null || true)"
-
   if grep -qi "Not Found" <<< "$err"; then
     echo "::error::Tag '$tag' not found in '$UPSTREAM_REPO'" >&2
     return 1
   fi
-
-  echo "::error::Failed to verify tag '$tag' in '$UPSTREAM_REPO' (API error)" >&2
+  echo "::error::Failed to verify tag '$tag' (API error)" >&2
   [[ -n "$err" ]] && echo "$err" >&2
   exit 1
+}
+
+# Helper to centralize tag regex logic per kind
+get_tag_regex_for_kind() {
+  local kind="$1"
+  case "$kind" in
+    box64*|wowbox64)
+      # Tags: v0.3.8, v1.0.0, ...
+      # - 필터:  v로 시작하는 버전 태그
+      # - strip: 선행 'v' 제거 → "v뒤의 모든 것" 사용
+      echo "^v[0-9]+\." "^v"
+      ;;
+    fexcore)
+      # Tags: FEX-2502, FEX-202501, ...
+      # - 필터: FEX- 접두를 가진 태그
+      # - strip: 'FEX-' 제거 → "FEX- 뒤의 모든 것" 사용
+      echo "^FEX-[0-9]+" "^FEX-"
+      ;;
+    dxvk*|vkd3d*)
+      # Tags: v2.4.1, 2.4.1, ...
+      # - 필터: 숫자로 시작(선행 v 허용)
+      # - strip: 안 함 → 전체 문자열을 버전으로 보고 sort -V
+      #   (v 제거는 resolve_standard_strategy 쪽에서 처리)
+      echo "^(v)?[0-9]" ""
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+# Latest stable tag resolver (per UNI_KIND)
+get_latest_stable() {
+  local kind="${1:-$UNI_KIND}"
+  local regex strip_pat all_tags
+
+  if ! read -r regex strip_pat <<< "$(get_tag_regex_for_kind "$kind")"; then
+    echo "::error::Unknown UNI_KIND for stable resolution: $kind" >&2
+    exit 1
+  fi
+
+  all_tags="$(fetch_github_tags)"
+  find_latest_tag "$all_tags" "$regex" "$strip_pat"
 }
 
 # =============================================================================
@@ -153,9 +171,8 @@ check_github_tag_exists() {
 fetch_gitlab_tags_all() {
   [[ -z "$GITLAB_REPO" ]] && { echo "::error::GITLAB_REPO is not set"; exit 1; }
   
-  local enc page HTTP next
+  local enc page HTTP next out_file="$TMP_DIR/gitlab_tags_raw.txt"
   enc="$(jq -rn --arg s "$GITLAB_REPO" '$s|@uri')"
-  local out_file="$TMP_DIR/gitlab_tags_raw.txt"
   : > "$out_file"
 
   echo "Fetching GitLab tags..." >&2
@@ -167,10 +184,7 @@ fetch_gitlab_tags_all() {
       "https://gitlab.com/api/v4/projects/${enc}/repository/tags?per_page=100&page=${page}" \
       -o "$TMP_DIR/page.json" || echo "FAIL")"
 
-    if [[ "$HTTP" != "200" ]]; then
-      echo "::error::GitLab API failed with status $HTTP" >&2
-      return 1
-    fi
+    [[ "$HTTP" != "200" ]] && { echo "::error::GitLab API failed with status $HTTP" >&2; return 1; }
 
     jq -r '.[].name // empty' "$TMP_DIR/page.json" >> "$out_file"
 
@@ -184,39 +198,29 @@ fetch_gitlab_tags_all() {
 # 3. Strategy Implementations
 # =============================================================================
 
-# Helper: Find latest tag matching regex
 find_latest_tag() {
-  local raw_tags="$1"
-  local regex="$2"
-  local strip_pat="$3"
-
+  local raw_tags="$1" regex="$2" strip_pat="$3"
   local filtered
   filtered="$(grep -E "$regex" <<< "$raw_tags" || true)"
-  # No match → empty string, but do NOT fail the script
   [[ -z "$filtered" ]] && return 0
 
-  if [[ "$strip_pat" == "sort-v" ]]; then
+  if [[ -z "$strip_pat" ]]; then
     sort -V <<< "$filtered" | tail -n1
   else
-    # Sophisticated sort: strip prefix, sort version, print original
     echo "$filtered" | awk -v pat="$strip_pat" '{
       key = $0; gsub(pat, "", key); print key " " $0
     }' | sort -k1,1V | tail -n1 | awk '{print $2}'
   fi
 }
 
-# -----------------------------------------------------------------------------
-# Strategy A: Standard GitHub (Box64, FEX, DXVK, VKD3D)
-# -----------------------------------------------------------------------------
+# Strategy A: Standard GitHub
 resolve_standard_strategy() {
   local channel="$1" input_arg="$2"
   local strategy="$UNI_KIND"
-  
   local ref ver_name ver_code filename short=""
   local dc; dc="$(get_datecode)"
 
   case "$strategy" in
-    # --- Box64 Family ---
     box64-bionic|wowbox64)
       if [[ "$channel" == "stable" ]]; then
         [[ -z "$input_arg" ]] && return 1
@@ -225,19 +229,15 @@ resolve_standard_strategy() {
         ver_code="0"
         filename="${strategy}-${ver_name}.wcp"
       else
-        # Nightly Logic (unified: <dev_ver>-YYMMDD-sha)
         ref="$(get_upstream_head_sha)"
-        [[ -z "$ref" ]] && return 1
         short="${ref:0:7}"
-
-        local all_tags latest latest_base dev_ver nightly_name
-        all_tags="$(fetch_github_tags)"
-        latest="$(find_latest_tag "$all_tags" '^v[0-9]+\.' '^v')"
         
+        local latest latest_base dev_ver
+        latest="$(find_latest_tag "$(fetch_github_tags)" '^v[0-9]+\.' '^v')"
         [[ -z "$latest" ]] && latest="v0.0.0"
         latest_base="${latest#v}"
 
-        # Bump patch version logic (simple heuristic)
+        # Heuristic: Bump patch version
         local v1 v2 v3 rest
         IFS='.' read -r v1 v2 v3 rest <<< "$latest_base"
         if [[ -z "$rest" && "$v3" =~ ^[0-9]+$ ]]; then
@@ -246,15 +246,12 @@ resolve_standard_strategy() {
           dev_ver="${latest_base}-dev"
         fi
 
-        nightly_name="${dev_ver}-${dc}-${short}"
-
-        ver_name="$nightly_name"
+        ver_name="${dev_ver}-${dc}-${short}"
         ver_code="0"
-        filename="${strategy}-${nightly_name}.wcp"
+        filename="${strategy}-${ver_name}.wcp"
       fi
       ;;
 
-    # --- FEXCore ---
     fexcore)
       if [[ "$channel" == "stable" ]]; then
         [[ -z "$input_arg" ]] && return 1
@@ -264,39 +261,31 @@ resolve_standard_strategy() {
         filename="FEXCore-${ver_name}.wcp"
       else
         ref="$(get_upstream_head_sha)"
-        [[ -z "$ref" ]] && return 1
         short="${ref:0:7}"
         
-        local all_tags latest base nightly_name
-        all_tags="$(fetch_github_tags)"
-        latest="$(find_latest_tag "$all_tags" '^FEX-[0-9]+' '^FEX-')"
+        local latest base
+        latest="$(find_latest_tag "$(fetch_github_tags)" '^FEX-[0-9]+' '^FEX-')"
         [[ -z "$latest" ]] && latest="FEX-0"
-        
         base="${latest#FEX-}"
-        nightly_name="${base}-${dc}-${short}"
-
-        ver_name="$nightly_name"
+        
+        ver_name="${base}-${dc}-${short}"
         ver_code="0"
-        filename="FEXCore-${nightly_name}.wcp"
+        filename="FEXCore-${ver_name}.wcp"
       fi
       ;;
 
-    # --- DXVK / VKD3D (Stable Only usually) ---
     dxvk*|vkd3d*)
-      if [[ "$channel" == "nightly" ]]; then
-         echo "::error::Nightly not supported for $strategy" >&2
-         return 1
-      fi
+      # DXVK/VKD3D는 이 가드 기준으로 Nightly 채널이 없다.
+      # 나중에 Nightly 전용 워크플로우를 만들면,
+      # 여기에서 "nightly" 분기 로직을 별도로 추가하면 된다.
+      [[ "$channel" == "nightly" ]] && { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
       [[ -z "$input_arg" ]] && return 1
       
       ref="$input_arg"
       local base
-      if [[ "$ref" =~ ^v[0-9] ]]; then
-        base="${ref#v}"
-      else
-        base="$(sed -E 's/^[^0-9]+//' <<< "$ref")"
-        [[ -z "$base" ]] && base="$ref"
-      fi
+      if [[ "$ref" =~ ^v[0-9] ]]; then base="${ref#v}";
+      else base="$(sed -E 's/^[^0-9]+//' <<< "$ref")"; fi
+      [[ -z "$base" ]] && base="$ref"
 
       local prefix="$strategy"
       [[ "$prefix" != *- ]] && prefix="${prefix}-"
@@ -311,78 +300,58 @@ resolve_standard_strategy() {
       return 1
       ;;
   esac
-
   echo "${ref}|${ver_name}|${ver_code}|${filename}|${short}"
 }
 
-# -----------------------------------------------------------------------------
-# Strategy B: GitLab DXVK-GPLASYNC Family
-# -----------------------------------------------------------------------------
+# Strategy B: GitLab DXVK-GPLASYNC
 resolve_gplasync_strategy() {
   local channel="$1" 
-  # Note: GPLAsync logic handles its own iteration/queueing because it processes
-  # multiple tags at once (the revision system), unlike the standard 1-tag logic.
-  
-  local prefix
-  case "$UNI_KIND" in
-    dxvk-gplasync) prefix="dxvk-gplasync" ;;
-    dxvk-gplasync-arm64ec) prefix="dxvk-gplasync-arm64ec" ;;
-    *) return 1 ;;
-  esac
+  local prefix="$UNI_KIND"
+  [[ "$prefix" != dxvk-gplasync* ]] && return 1
 
-  # 1. Get cached assets to find what we already have
-  local assets existing_pairs_file
+  # 1. Get cached assets once
+  local assets
   if ! assets="$(get_assets_cached "stable")"; then
     echo "::error::Cannot resolve existing GPLAsync assets (asset cache failed)." >&2
     return 1
   fi
 
-  assets="$(get_assets_cached "stable")"
-  existing_pairs_file="$TMP_DIR/exist_gplasync.txt"
+  local existing_pairs_file="$TMP_DIR/exist_gplasync.txt"
   : > "$existing_pairs_file"
 
+  # 2. Parse existing assets
   if [[ -n "$assets" ]]; then
     while IFS= read -r name; do
-      # Regex: prefix-VERSION-REV.wcp
       if [[ "$name" =~ ^${prefix}-([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)\.wcp$ ]]; then
         echo "${BASH_REMATCH[1]} ${BASH_REMATCH[3]}" >> "$existing_pairs_file"
       fi
     done <<< "$assets"
   fi
 
-  # 2. Fetch GitLab Tags
-  if ! fetch_gitlab_tags_all; then
-    return 1
-  fi
+  # 3. Fetch GitLab Tags
+  fetch_gitlab_tags_all || return 1
   local tags_file="$TMP_DIR/gitlab_tags_raw.txt"
-
-  # 3. Determine Targets
   local targets_file="$TMP_DIR/gplasync_targets.txt"
   : > "$targets_file"
 
+  # 4. Determine Targets
   if [[ -n "$IN_VERSION" ]]; then
-    # Manual Mode: "v2.7.1-1, v2.6-2"
+    # Manual Mode
     IFS=',' read -ra reqs <<< "$IN_VERSION"
     for raw in "${reqs[@]}"; do
       local tag; tag="$(echo "$raw" | xargs)"
       [[ -z "$tag" ]] && continue
       
-      # Check regex vBase-Rev
       if [[ ! "$tag" =~ ^v([0-9]+\.[0-9]+(\.[0-9]+)?)\-([0-9]+)$ ]]; then
-        echo "::error::Invalid tag format '$tag' (expect vX.Y-R)" >&2
-        continue
+        echo "::error::Invalid tag format '$tag' (expect vX.Y-R)" >&2; continue
       fi
-      
-      # Validate against fetched tags
       if ! grep -Fxq "$tag" "$tags_file"; then
-         echo "::error::Tag '$tag' not found on GitLab." >&2
-         continue
+         echo "::error::Tag '$tag' not found on GitLab." >&2; continue
       fi
-      
       echo "${BASH_REMATCH[1]} ${BASH_REMATCH[3]}" >> "$targets_file"
     done
   else
-    # Auto Mode: Find Max Rev per Base
+    # Auto Mode (Max Rev per Base)
     jq -rRn '
       (input | split("\n") | map(select(length>0))) as $lines |
       $lines
@@ -392,31 +361,18 @@ resolve_gplasync_strategy() {
       | map({ base: .[0].base, rev: (map(.rev | tonumber) | max) })
       | .[] | "\(.base) \(.rev)"
     ' < "$tags_file" > "$targets_file"
-
-    if [[ ! -s "$targets_file" ]]; then
-      echo "::error::No valid vX.Y[.Z]-R tags found in GitLab for $GITLAB_REPO" >&2
-      return 1
-    fi
+    
+    [[ ! -s "$targets_file" ]] && { echo "::error::No valid vX.Y-R tags found in GitLab" >&2; return 1; }
   fi
 
-  # 4. Process Targets & Enqueue
+  # 5. Process & Enqueue
   while read -r base rev; do
     [[ -z "$base" ]] && continue
-    
     if grep -Fq "${base} ${rev}" "$existing_pairs_file"; then
-      echo "  -> Skipped (Already exists: ${base}-${rev})" >&2
-      continue
+      echo "  -> Skipped (Already exists: ${base}-${rev})" >&2; continue
     fi
-    
-    # Construct Build Item
     # Format: ref|ver_name|ver_code|filename|short
-    local ref="v${base}-${rev}" # GitLab tag
-    local ver_name="${base}-${rev}"
-    local filename="${prefix}-${base}-${rev}.wcp"
-    
-    # For GPLAsync, we pass 'rev' as ver_code
-    add_to_queue "stable" "${ref}|${ver_name}|0|${filename}|"
-    
+    add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|0|${prefix}-${base}-${rev}.wcp|"
   done < "$targets_file"
 }
 
@@ -433,24 +389,24 @@ add_to_queue() {
 
   local assets
   assets="$(get_assets_cached "$channel")"
-
   local rel_tag
   [[ "$channel" == "stable" ]] && rel_tag="$REL_TAG_STABLE" || rel_tag="$REL_TAG_NIGHTLY"
 
-  if [[ -n "$assets" ]] && grep -Fxq "$filename" <<< "$assets"; then
-    echo "  -> Skipped (Asset Exists: $filename)" >&2
-    return
-  fi
-
-  if [[ "$channel" == "nightly" && -n "$short" && -n "$assets" ]]; then
-    if grep -Eq -- "\-${short}\.wcp$" <<< "$assets"; then
-       echo "  -> Skipped (SHA $short already built)" >&2
-       return
+  # Check Existence
+  if [[ -n "$assets" ]]; then
+    if grep -Fxq "$filename" <<< "$assets"; then
+      echo "  -> Skipped (Asset Exists: $filename)" >&2; return
+    fi
+    if [[ "$channel" == "nightly" && -n "$short" ]]; then
+       # Avoid rebuilding same SHA for nightly
+       if grep -Eq -- "\-${short}\.wcp$" <<< "$assets"; then
+          echo "  -> Skipped (SHA $short already built)" >&2; return
+       fi
     fi
   fi
 
   echo "  -> Queued: $filename" >&2
-  QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${ver_code}|${rel_tag}|${rel_tag}|${filename}|${short}"$'\n'
+  QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${ver_code}|${rel_tag}|${filename}|${short}"$'\n'
   HAS_WORK=true
 }
 
@@ -468,34 +424,23 @@ dispatch_logic() {
   fi
 
   # B. Standard Handling
+  #
+  # Rule:
+  # - REL_TAG_NIGHTLY가 비어있지 않으면 "나이틀리를 포함한 빌더"
+  # - 비어있으면 나이틀리 없음
+  # => UNI_KIND와는 독립적으로, 워크플로우 env/vars 구성만으로 제어
   local has_nightly=false
-  case "$UNI_KIND" in
-    box64*|wowbox64|fexcore) has_nightly=true ;;
-  esac
-
-  if [[ "$has_nightly" == "true" && -z "$REL_TAG_NIGHTLY" ]]; then
-    echo "::error::REL_TAG_NIGHTLY is required for $UNI_KIND but is not set" >&2
-    exit 1
+  if [[ -n "${REL_TAG_NIGHTLY:-}" ]]; then
+    has_nightly=true
   fi
 
+  # Helper: Get latest stable tag based on UNI_KIND rules
+  # Scenario 1: Auto / Schedule
   if [[ "$IS_SCHEDULE" == "true" || "$IN_CHANNEL" == "auto" ]]; then
-    # Auto Mode
     echo "::group::Strategy: Auto/Schedule ($UNI_KIND)"
     
-    # 1. Stable
-    local all_tags; all_tags="$(fetch_github_tags)"
-    local latest=""
-    
-    case "$UNI_KIND" in
-      box64*|wowbox64) latest="$(find_latest_tag "$all_tags" '^v[0-9]+\.' '^v')" ;;
-      fexcore)         latest="$(find_latest_tag "$all_tags" '^FEX-[0-9]+' '^FEX-')" ;;
-      dxvk*|vkd3d*)    latest="$(find_latest_tag "$all_tags" '^(v)?[0-9]' 'sort-v')" ;;
-      *)
-        echo "::error::Unknown UNI_KIND: $UNI_KIND" >&2
-        exit 1
-        ;;
-    esac
-
+    # Stable check
+    local latest; latest="$(get_latest_stable)"
     if [[ -n "$latest" ]]; then
        local res; res="$(resolve_standard_strategy "stable" "$latest")"
        [[ -n "$res" ]] && add_to_queue "stable" "$res"
@@ -503,59 +448,42 @@ dispatch_logic() {
        echo "::warning::No stable tag found for $UNI_KIND"
     fi
 
-    # 2. Nightly
+    # Nightly check
     if [[ "$has_nightly" == "true" ]]; then
        local res_n; res_n="$(resolve_standard_strategy "nightly" "")"
        [[ -n "$res_n" ]] && add_to_queue "nightly" "$res_n"
     fi
     echo "::endgroup::"
 
+  # Scenario 2: Manual
   else
-    # Manual Mode
     echo "::group::Strategy: Manual ($IN_CHANNEL / $IN_VERSION)"
-    case "$IN_CHANNEL" in
-      stable)
+    if [[ "$IN_CHANNEL" == "stable" ]]; then
         if [[ -z "$IN_VERSION" ]]; then
-           # Manual trigger but no version -> Latest stable
-           local all_tags; all_tags="$(fetch_github_tags)"
-           local latest=""
-
-           case "$UNI_KIND" in
-             box64*|wowbox64) latest="$(find_latest_tag "$all_tags" '^v[0-9]+\.' '^v')" ;;
-             fexcore)         latest="$(find_latest_tag "$all_tags" '^FEX-[0-9]+' '^FEX-')" ;;
-             dxvk*|vkd3d*)    latest="$(find_latest_tag "$all_tags" '^(v)?[0-9]' 'sort-v')" ;;
-             *)
-               echo "::error::Unknown UNI_KIND: $UNI_KIND" >&2
-               exit 1
-               ;;
-           esac
-
+           # No version specified -> fetch latest
+           local latest; latest="$(get_latest_stable)"
            if [[ -n "$latest" ]]; then
              local res; res="$(resolve_standard_strategy "stable" "$latest")"
              [[ -n "$res" ]] && add_to_queue "stable" "$res"
            else
-             echo "::error::No stable tag found for $UNI_KIND" >&2
-             exit 1
+             echo "::error::No stable tag found for $UNI_KIND" >&2; exit 1
            fi
         else
+           # Specific versions
            IFS=',' read -ra vers <<< "$IN_VERSION"
            for raw in "${vers[@]}"; do
              raw="$(echo "$raw" | xargs)"
              [[ -z "$raw" ]] && continue
-             if ! check_github_tag_exists "$raw"; then
-                exit 1
-             fi
+             check_github_tag_exists "$raw"
              local res; res="$(resolve_standard_strategy "stable" "$raw")"
              [[ -n "$res" ]] && add_to_queue "stable" "$res"
            done
         fi
-        ;;
-      nightly)
+    elif [[ "$IN_CHANNEL" == "nightly" ]]; then
         [[ "$has_nightly" != "true" ]] && { echo "::error::Nightly not supported"; exit 1; }
         local res; res="$(resolve_standard_strategy "nightly" "")"
         [[ -n "$res" ]] && add_to_queue "nightly" "$res"
-        ;;
-    esac
+    fi
     echo "::endgroup::"
   fi
 }
@@ -566,11 +494,7 @@ dispatch_logic
 # Output
 if $HAS_WORK; then
   echo "missing=true" >> "$GITHUB_OUTPUT"
-  {
-    echo "list<<EOF"
-    printf '%s' "$QUEUE"
-    echo "EOF"
-  } >> "$GITHUB_OUTPUT"
+  printf 'list<<EOF\n%sEOF\n' "$QUEUE" >> "$GITHUB_OUTPUT"
   echo "::notice::Build queue populated."
 else
   echo "missing=false" >> "$GITHUB_OUTPUT"
