@@ -180,7 +180,7 @@ jobs:
           ARTIFACT_GLOB:  "artifacts/${{ env.FILENAME }}"
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           BODY: |
-            - Architecture: ARM64 host (Wine WOW64) + 32-bit x86 guest thunk
+            - Architecture: ARM64 host (Linux ELF / Wine) + 32-bit x86 guest thunk
             - **Exclusive for Bionic**
         run: bash ./scripts/release.sh
 
