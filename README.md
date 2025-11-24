@@ -76,9 +76,9 @@ This repo just got a full refresh for no reason! 🎉
 
 | Backend | 🔍 | 📝 |
 |:-:|:-:|-|
-| **Old Mono** | Single large `UnityEngine.dll` | ❌ Technically possible, practically not worth the trouble. |
-| **Mono** | `Assembly-CSharp.dll` | 🟡 Most Unity games use this. Performance can dip, but it runs. |
-| **IL2CPP** | `GameAssembly.dll` | 🟢 Performs well and safely tolerates more aggressive settings. |
+| **Old Mono** | `UnityEngine.dll` | ❌ Very cumbersome, and even when it runs the performance drop is severe. |
+| **Mono** | `Assembly-CSharp.dll` | 🟡 Most Unity games use this. Performance varies, but they generally run. |
+| **IL2CPP** | `GameAssembly.dll` | 🟢 Performs well and usually tolerates more aggressive settings safely. |
 
 ---
 
