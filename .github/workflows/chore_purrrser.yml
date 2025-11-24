@@ -111,17 +111,26 @@ jobs:
               fi
             fi
 
-            # box64
-            final_ver="$ver"
-            if [ "$key" = "box64" ] && [ "$ver" != "⛔BRRR" ]; then
-              base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
-              if [ -n "$base" ]; then
-                maj=${base%%.*}
-                rest=${base#*.}
-                min=${rest%%.*}
-                pat=${rest#*.}
-                next=$((pat+1))
-                final_ver="${maj}.${min}.${pat} · ${maj}.${min}.${next}"
+            if [ "$ver" = "⛔BRRR" ]; then
+              final_ver="$ver"
+            else
+              if [ "$key" = "box64" ]; then
+                base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
+                if [ -n "$base" ]; then
+                  maj=${base%%.*}
+                  rest=${base#*.}
+                  min=${rest%%.*}
+                  pat=${rest#*.}
+                  next=$((pat+1))
+                  # `0.3.8` `0.3.9`
+                  final_ver="\`${maj}.${min}.${pat}\` \`${maj}.${min}.${next}\`"
+                else
+                  # fallback: just wrap whatever came out
+                  final_ver="\`$ver\`"
+                fi
+              else
+                # all non-box64: plain code block
+                final_ver="\`$ver\`"
               fi
             fi
 
