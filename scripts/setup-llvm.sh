@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 set -Eeuo pipefail
 
 LLVM_MINGW_TAG="${LLVM_MINGW_TAG:-20251118}"
