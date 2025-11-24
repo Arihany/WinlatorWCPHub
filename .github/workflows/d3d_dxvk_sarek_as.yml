@@ -115,6 +115,7 @@ jobs:
 
               # 2. Apply Patch
               bash ../scripts/patches/dxvk.sh .
+              DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek-arm64ec.sh .
 
               # 3. Build (Upstream)
               ../.venv/bin/meson --version || true
