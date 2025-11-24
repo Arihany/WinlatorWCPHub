@@ -74,7 +74,7 @@ jobs:
         run: bash ./scripts/guard-matrix.sh
 
   build:
-    name: Build ${{ format('{0} ({1})', matrix.rel_title, matrix.ver_name) }}
+    name: Build ${{ format('{0} ({1})', matrix.rel_tag, matrix.ver_name) }}
     needs: guard
     if: needs.guard.outputs.missing == 'true'
     runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
@@ -87,7 +87,6 @@ jobs:
       FILENAME:      ${{ matrix.filename }}
       VER_NAME:      ${{ matrix.ver_name }}
       REL_TAG:       ${{ matrix.rel_tag }}
-      REL_TITLE:     ${{ matrix.rel_title }}
     steps:
 
       - name: Checkout
