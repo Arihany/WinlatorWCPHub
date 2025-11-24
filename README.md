@@ -7,10 +7,9 @@
 <h4 align="center">Automated builds, Always up to date</h4>
 
 ---
+ <sup>$\color{grey}{\texttt{This repo just got a full refresh for no reason! 🎉}}$</sup>
 
-This repo just got a full refresh for no reason! 🎉
-
-<sup>Enjoy the new useful bits and the completely unnecessary freshly rebuilt files!</sup>
+<sup>$\color{grey}{\texttt{Enjoy the new useful bits and the completely unnecessary freshly rebuilt files!}}$</sup>
 
 ---
 
@@ -68,7 +67,7 @@ This repo just got a full refresh for no reason! 🎉
 </details>
 
 <details>
-<summary>🧐 $\color{green}{\texttt{UNITY SETTINGS}}$</summary>
+<summary>🧐 UNITY SETTINGS</summary>
 
 ---
 
