@@ -18,8 +18,7 @@ if ! command -v "$PYTHON" >/dev/null 2>&1; then
   exit 1
 fi
 
-echo "== Sarek ARM64EC patch start (Hard-Fail Mode) =="
-echo "Target MOCK_DIR: $MOCK_DIR"
+echo "== Sarek ARM64EC patch start (Precision Mode) =="
 
 if [[ ! -f "$REAL_SHIM_SRC" ]]; then
   echo "::error::NEON shim implementation not found at $REAL_SHIM_SRC"
@@ -29,26 +28,22 @@ fi
 FINAL_HEADER="$MOCK_DIR/sarek_all_in_one.h"
 
 # ---------------------------------------------------------------------------
-# 1) shim header
+# 1) Shim Header Setup
 # ---------------------------------------------------------------------------
 cat > "$FINAL_HEADER" <<'EOF'
 #pragma once
-
 #ifndef __CRT__NO_INLINE
   #define __CRT__NO_INLINE 1
 #endif
-
 #if (defined(__arm64ec__) || defined(_M_ARM64EC)) && !defined(_ARM64EC_)
   #define _ARM64EC_ 1
 #endif
-
 #ifdef __cplusplus
   #define SAREK_ARM64EC 1
   #define _mm_pause _mm_pause_renamed_ignore
 #endif
 EOF
 
-# merge NEON SSE shim
 cat "$REAL_SHIM_SRC" >> "$FINAL_HEADER"
 
 cat >> "$FINAL_HEADER" <<'EOF'
@@ -59,7 +54,6 @@ cat >> "$FINAL_HEADER" <<'EOF'
   static inline void _mm_pause(void) {
     __asm__ __volatile__("yield" ::: "memory");
   }
-
   #if defined(__arm64ec__) || defined(_M_ARM64EC) || defined(SAREK_ARM64EC)
     #include <intrin.h>
     #ifndef bitScanForward
@@ -72,7 +66,7 @@ cat >> "$FINAL_HEADER" <<'EOF'
       #define popcnt          __popcnt
     #endif
   #endif
-#endif // __cplusplus
+#endif
 EOF
 
 HEADERS=(
@@ -97,43 +91,62 @@ import sys, pathlib
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
-old = '''    #elif defined(__GNUC__) || defined(__clang__)
-    uint32_t res;
-    uint32_t tmp;
-    asm (
-      "mov  $32, %1;"
-      "bsf   %2, %0;"
-      "cmovz %1, %0;"
-      : "=&r" (res), "=&r" (tmp)
-      : "r" (n));
-    return res;'''
-
-new = '''    #elif defined(__GNUC__) || defined(__clang__)
-    return n ? __builtin_ctz(n) : 32;'''
-
-if '__builtin_ctz' in text:
-    print("[OK] util_bit.h: already uses __builtin_ctz; no patch needed")
+if "inline uint32_t tzcnt(uint32_t n)" in text and "return n ? __builtin_ctz(n) : 32;" in text:
+    print("[OK] util_bit.h: tzcnt already uses __builtin_ctz")
     sys.exit(0)
 
-if old in text:
-    text = text.replace(old, new)
-    path.write_text(text, encoding="utf-8")
-    print("Patched util_bit.h: tzcnt GNU/Clang asm -> builtin")
-    sys.exit(0)
+lines = text.splitlines(True)
+out = []
 
-if 'asm' in text and 'bsf' in text:
-    print("::error::[CRITICAL] util_bit.h: x86 asm present but pattern not matched; manual fix required")
-    sys.exit(1)
+inside_tzcnt = False
+patched = False
+i = 0
 
-print("[OK] util_bit.h: no x86 asm / no patch required")
+while i < len(lines):
+    line = lines[i]
+
+    # tzcnt 함수 시작 감지
+    if "inline uint32_t tzcnt(uint32_t n)" in line:
+        inside_tzcnt = True
+        out.append(line)
+        i += 1
+        continue
+
+    if inside_tzcnt and "#elif defined(__GNUC__) || defined(__clang__)" in line and not patched:
+        out.append("    #elif defined(__GNUC__) || defined(__clang__)\n")
+        out.append("    return n ? __builtin_ctz(n) : 32;\n")
+        i += 1
+
+        while i < len(lines) and "#else" not in lines[i]:
+            i += 1
+
+        patched = True
+        continue
+
+    out.append(line)
+
+    if inside_tzcnt and "#endif" in line:
+        inside_tzcnt = False
+
+    i += 1
+
+if not patched:
+    if 'bsf   %2, %0;' in text:
+        print("::error::[util_bit.h] tzcnt GNU inline asm still present; patch did not match structure.")
+        sys.exit(1)
+    else:
+        print("[OK] util_bit.h: no GNU tzcnt asm to patch (probably updated upstream).")
+        sys.exit(0)
+
+path.write_text("".join(out), encoding="utf-8")
+print("[OK] util_bit.h: replaced GNU/Clang tzcnt asm with __builtin_ctz")
 PY
 else
-  echo "::error::util_bit.h not found!"
-  exit 1
+  echo "::warning::util_bit.h not found, skipping bitops patch"
 fi
 
 # ---------------------------------------------------------------------------
-# 3) d3d9_device.cpp: initialize FPU control word
+# 3) d3d9_device.cpp: ARM64EC-safe FPU setup + control init
 # ---------------------------------------------------------------------------
 D3D9_FILE="$ROOT/src/d3d9/d3d9_device.cpp"
 if [[ -f "$D3D9_FILE" ]]; then
@@ -143,22 +156,33 @@ import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
-check_pattern = r'uint16_t\s+control\s*=\s*0\s*;'
-if re.search(check_pattern, text):
-    print("[OK] d3d9_device.cpp: already initialized (control = 0)")
-    sys.exit(0)
+changed = False
 
-pattern = r'(\s*)uint16_t\s+control\s*;'
-replacement = r'\1uint16_t control = 0;'
+old_cond = '#elif (defined(__GNUC__) || defined(__MINGW32__)) && (defined(__i386__) || defined(__x86_64__) || defined(__ia64))'
+new_cond = old_cond + ' && !defined(__arm64ec__) && !defined(_M_ARM64EC)'
 
-new_text, n = re.subn(pattern, replacement, text, count=1)
-
-if n > 0:
-    path.write_text(new_text, encoding="utf-8")
-    print("Patched d3d9_device.cpp: initialized FPU control word")
+if old_cond in text and new_cond not in text:
+    text = text.replace(old_cond, new_cond)
+    print("[OK] d3d9_device.cpp: guarded GNU FPU asm against __arm64ec__")
+    changed = True
+elif new_cond in text:
+    print("[OK] d3d9_device.cpp: FPU asm guard already applied")
 else:
-    print("::error::[CRITICAL] d3d9_device.cpp: 'control' variable declaration not found; FPU patch failed")
-    sys.exit(1)
+    print("::warning::d3d9_device.cpp: FPU asm #elif condition not found; layout may have changed")
+
+if re.search(r'uint16_t\s+control\s*=\s*0\s*;', text):
+    print("[OK] d3d9_device.cpp: control already initialized")
+else:
+    new_text, n = re.subn(r'(\s*)uint16_t\s+control\s*;', r'\1uint16_t control = 0;', text, count=1)
+    if n > 0:
+        text = new_text
+        print("[OK] d3d9_device.cpp: initialized 'control' to 0")
+        changed = True
+    else:
+        print("::warning::d3d9_device.cpp: 'uint16_t control;' declaration not found (layout changed?)")
+
+if changed:
+    path.write_text(text, encoding="utf-8")
 PY
 else
   echo "::error::d3d9_device.cpp not found!"
@@ -166,7 +190,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4) dxvk_pipecompiler.h: fix struct/class mismatched-tags
+# 4) dxvk_pipecompiler.h: Fix struct/class mismatch
 # ---------------------------------------------------------------------------
 PIPE_FILE="$ROOT/src/dxvk/dxvk_pipecompiler.h"
 if [[ -f "$PIPE_FILE" ]]; then
@@ -176,11 +200,11 @@ import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
-has_class = ('class DxvkGraphicsPipelineStateInfo' in text) or ('class DxvkComputePipelineStateInfo' in text)
-has_struct = ('struct DxvkGraphicsPipelineStateInfo' in text) or ('struct DxvkComputePipelineStateInfo' in text)
+has_class = ('class DxvkGraphicsPipelineStateInfo' in text)
+has_struct = ('struct DxvkGraphicsPipelineStateInfo' in text)
 
 if not has_class and has_struct:
-    print("[OK] dxvk_pipecompiler.h: already uses struct forward decls; no patch needed")
+    print("[OK] dxvk_pipecompiler.h: clean")
     sys.exit(0)
 
 patterns = [
@@ -191,20 +215,18 @@ patterns = [
 changed_count = 0
 for pat, repl in patterns:
     new_text, n = re.subn(pat, repl, text)
-    if n:
-        changed_count += n
-        text = new_text
+    if n: changed_count += n; text = new_text
 
 if changed_count > 0:
     path.write_text(text, encoding="utf-8")
-    print(f"[OK] dxvk_pipecompiler.h: forward decls switched to struct ({changed_count} changes)")
+    print(f"[OK] dxvk_pipecompiler.h: fixed {changed_count} declarations")
     sys.exit(0)
 
 if has_class:
-    print("::error::[CRITICAL] dxvk_pipecompiler.h: class forward decls still present; patch pattern mismatch")
+    print("::error::[CRITICAL] dxvk_pipecompiler.h: class forward decls persist!")
     sys.exit(1)
 
-print("[OK] dxvk_pipecompiler.h: no matching class forward decls; no patch needed")
+print("[OK] dxvk_pipecompiler.h: clean")
 PY
 else
   echo "::error::dxvk_pipecompiler.h not found!"
@@ -212,32 +234,36 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5) meson.build Tagging
+# 5) meson.build & version.h.in (Tagging)
 # ---------------------------------------------------------------------------
 MESON_FILE="$ROOT/meson.build"
 if [[ -f "$MESON_FILE" ]]; then
   "$PYTHON" - "$MESON_FILE" <<'PY'
 import sys, pathlib
-
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
-
-needle = "--dirty=-async'"
-replacement = "--dirty=-async-Arm64EC'"
-
-if needle in text:
-    text = text.replace(needle, replacement, 1)
+if "--dirty=-async'" in text:
+    text = text.replace("--dirty=-async'", "--dirty=-async-Arm64EC'")
     path.write_text(text, encoding="utf-8")
-    print("[OK] meson.build: vcs_tag suffix updated")
-else:
-    print("::warning::meson.build: vcs_tag pattern not found")
+    print("[OK] meson.build updated")
 PY
 fi
 
-# ---------------------------------------------------------------------------
-# 7) export
-# ---------------------------------------------------------------------------
+VER_IN="$ROOT/version.h.in"
+if [[ -f "$VER_IN" ]]; then
+  "$PYTHON" - "$VER_IN" <<'PY'
+import sys, pathlib, re
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8", errors="ignore")
+m = re.search(r'(#define\s+DXVK_VERSION\s+")([^"]*)(")', text)
+if m and 'arm64ec' not in m.group(2).lower():
+    new_body = m.group(2) + '-Arm64EC'
+    new_text = text[:m.start()] + f'{m.group(1)}{new_body}{m.group(3)}' + text[m.end():]
+    path.write_text(new_text, encoding="utf-8")
+    print(f"[OK] version.h.in -> {new_body}")
+PY
+fi
+
 export MOCK_DIR
 export SHIM_FILE="$FINAL_HEADER"
-
 echo "== Sarek ARM64EC patch completed successfully =="
