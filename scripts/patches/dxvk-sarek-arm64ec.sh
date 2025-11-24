@@ -105,7 +105,6 @@ i = 0
 while i < len(lines):
     line = lines[i]
 
-    # tzcnt 함수 시작 감지
     if "inline uint32_t tzcnt(uint32_t n)" in line:
         inside_tzcnt = True
         out.append(line)
@@ -158,6 +157,7 @@ text = path.read_text(encoding="utf-8", errors="ignore")
 
 changed = False
 
+# [1] FPU Assembly Guard Patch
 old_cond = '#elif (defined(__GNUC__) || defined(__MINGW32__)) && (defined(__i386__) || defined(__x86_64__) || defined(__ia64))'
 new_cond = old_cond + ' && !defined(__arm64ec__) && !defined(_M_ARM64EC)'
 
@@ -170,6 +170,7 @@ elif new_cond in text:
 else:
     print("::warning::d3d9_device.cpp: FPU asm #elif condition not found; layout may have changed")
 
+# [2] Uninitialized Variable Patch
 if re.search(r'uint16_t\s+control\s*=\s*0\s*;', text):
     print("[OK] d3d9_device.cpp: control already initialized")
 else:
@@ -179,7 +180,8 @@ else:
         print("[OK] d3d9_device.cpp: initialized 'control' to 0")
         changed = True
     else:
-        print("::warning::d3d9_device.cpp: 'uint16_t control;' declaration not found (layout changed?)")
+        print("::error::[CRITICAL] d3d9_device.cpp: 'uint16_t control;' declaration not found! Source drift detected.")
+        sys.exit(1)
 
 if changed:
     path.write_text(text, encoding="utf-8")
