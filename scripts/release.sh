@@ -1,6 +1,6 @@
 #  /\_/\
 # (=•ᆽ•=)づ✈
-
+#!/usr/bin/env bash
 set -Eeuo pipefail
 
 REL_TAG="${REL_TAG:?REL_TAG not set}"
@@ -13,9 +13,6 @@ REL_TAG_NIGHTLY="${REL_TAG_NIGHTLY:-}"
 UPSTREAM_REPO="${UPSTREAM_REPO:-}"
 REF="${REF:-}"
 
-# Optional fallback = REL_TAG
-REL_TITLE="${REL_TITLE:-$REL_TAG}"
-
 NOTES="${NOTES:-RELEASE_NOTES.md}"
 BODY="${BODY:-}"
 
@@ -26,7 +23,7 @@ if [[ -n "$BODY" ]]; then
 fi
 
 if compgen -G "$ARTIFACT_GLOB" > /dev/null; then
-  LATEST=$(ls $ARTIFACT_GLOB | sort -V | tail -n1)
+  LATEST="$(compgen -G "$ARTIFACT_GLOB" | sort -V | tail -n1)"
   VER="${LATEST##*/}"
   if [[ -n "$VERSION_PREFIX" ]]; then
     VER="${VER#${VERSION_PREFIX}}"
@@ -59,9 +56,9 @@ if compgen -G "$ARTIFACT_GLOB" > /dev/null; then
   echo "$CURRENT_LINE" >> "$NOTES"
 
   if ! gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1; then
-    gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TITLE" -F "$NOTES"
+    gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
   else
-    gh release edit "$REL_TAG" --repo "$REPO" -t "$REL_TITLE" -F "$NOTES"
+    gh release edit "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
   fi
 
   gh release upload "$REL_TAG" $ARTIFACT_GLOB --repo "$REPO" --clobber
