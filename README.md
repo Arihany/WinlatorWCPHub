@@ -86,8 +86,8 @@ This repo just got a full refresh for no reason! 🎉
 
 | Box64 | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **SAFEFLAGS** | `1` | Higher values usually do not help. |
-| **STRONGMEM** | `1` | Higher values usually do not help. |
+| **SAFEFLAGS** | `1` | Keep as is. Higher values are usually too slow to be worth it. |
+| **STRONGMEM** | `1` | Required for many Unity games. Higher values are usually too slow to be worth it. |
 | **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
 | **BIGBLOCK** | `2` | Lower values are more stable. Official recommendation is `0` but `2` is usually still safe. |
 | **CALLRET** | `0` | `1` might help performance, but the gain is modest. |
