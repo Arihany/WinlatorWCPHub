@@ -2,7 +2,6 @@
 
 #  /\_/\
 # (=•ᆽ•=)づ︻╦╤─
-# Refactored for DRY & Readability
 
 set -Eeuo pipefail
 
@@ -126,22 +125,12 @@ get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
     box64*|wowbox64)
-      # Tags: v0.3.8, v1.0.0, ...
-      # - 필터:  v로 시작하는 버전 태그
-      # - strip: 선행 'v' 제거 → "v뒤의 모든 것" 사용
       echo "^v[0-9]+\." "^v"
       ;;
     fexcore)
-      # Tags: FEX-2502, FEX-202501, ...
-      # - 필터: FEX- 접두를 가진 태그
-      # - strip: 'FEX-' 제거 → "FEX- 뒤의 모든 것" 사용
       echo "^FEX-[0-9]+" "^FEX-"
       ;;
     dxvk*|vkd3d*)
-      # Tags: v2.4.1, 2.4.1, ...
-      # - 필터: 숫자로 시작(선행 v 허용)
-      # - strip: 안 함 → 전체 문자열을 버전으로 보고 sort -V
-      #   (v 제거는 resolve_standard_strategy 쪽에서 처리)
       echo "^(v)?[0-9]" ""
       ;;
     *)
@@ -275,9 +264,7 @@ resolve_standard_strategy() {
       ;;
 
     dxvk*|vkd3d*)
-      # DXVK/VKD3D는 이 가드 기준으로 Nightly 채널이 없다.
-      # 나중에 Nightly 전용 워크플로우를 만들면,
-      # 여기에서 "nightly" 분기 로직을 별도로 추가하면 된다.
+      # placeholder for dxvk vkd3d nigthly
       [[ "$channel" == "nightly" ]] && { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
       [[ -z "$input_arg" ]] && return 1
       
@@ -424,11 +411,6 @@ dispatch_logic() {
   fi
 
   # B. Standard Handling
-  #
-  # Rule:
-  # - REL_TAG_NIGHTLY가 비어있지 않으면 "나이틀리를 포함한 빌더"
-  # - 비어있으면 나이틀리 없음
-  # => UNI_KIND와는 독립적으로, 워크플로우 env/vars 구성만으로 제어
   local has_nightly=false
   if [[ -n "${REL_TAG_NIGHTLY:-}" ]]; then
     has_nightly=true
