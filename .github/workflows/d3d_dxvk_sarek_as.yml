@@ -178,6 +178,7 @@ jobs:
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
             - **General-purpose x64/x86 build**
+            - **Patched: Minor correctness & ABI cleanups**
         run: bash ./scripts/release.sh
 
   bump-readme:
