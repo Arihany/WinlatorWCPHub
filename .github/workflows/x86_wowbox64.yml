@@ -124,6 +124,7 @@ jobs:
             # 2. Configure
             cmake -S src -B build -G Ninja \
               -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
+              -DCMAKE_ASM_COMPILER=aarch64-linux-gnu-gcc \
               -DCMAKE_BUILD_TYPE=Release \
               -DARM_DYNAREC=1 \
               -DWOW64=1 \
