@@ -181,7 +181,6 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           BODY: |
             - Architecture: ARM64 host (Linux ELF / Wine) + 32-bit x86 guest thunk
-            - **Exclusive for Bionic**
         run: bash ./scripts/release.sh
 
   bump-readme:
