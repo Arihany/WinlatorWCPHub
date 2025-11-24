@@ -184,7 +184,6 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           BODY: |
             - Architecture: ARM64 host (Android 31 / Bionic) + 64-bit x86 guest
-            - **Exclusive for Bionic**
         run: bash ./scripts/release.sh
 
   bump-readme:
