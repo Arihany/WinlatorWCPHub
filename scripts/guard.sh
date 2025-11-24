@@ -24,9 +24,8 @@ GITLAB_REPO="${GITLAB_REPO:-}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-# -----------------------------------------------------------------------------
-# 0.5 Ensure required tools (jq, curl)
-# -----------------------------------------------------------------------------
+
+# 0.5 Ensure required tools
 ensure_base_tools() {
   command -v jq >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && return 0
 
@@ -207,7 +206,6 @@ resolve_standard_strategy() {
   local ref ver_name filename short=""
   local dc=""
 
-  # datecode는 nightly에서만 필요하다
   if [[ "$channel" == "nightly" ]]; then
     dc="$(get_datecode)"
   fi
@@ -263,7 +261,6 @@ resolve_standard_strategy() {
       ;;
 
     dxvk*|vkd3d*)
-      # Nightly는 현재 미지원
       [[ "$channel" == "nightly" ]] && { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
       [[ -z "$input_arg" ]] && return 1
       
