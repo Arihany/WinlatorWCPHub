@@ -16,14 +16,13 @@ matrix_json=$(
     | map(
         (split("|")) as $cols
         | {
-            kind:      $cols[0],
-            channel:   $cols[1],
-            ref:       $cols[2],
-            ver_name:  $cols[3],
-            ver_code:  $cols[4],
-            rel_tag:   $cols[5],
-            filename:  $cols[6],
-            short:     $cols[7]
+            kind:     $cols[0],
+            channel:  $cols[1],
+            ref:      $cols[2],
+            ver_name: $cols[3],
+            rel_tag:  $cols[4],
+            filename: $cols[5],
+            short:    $cols[6]
           }
       )
     | { include: . }
