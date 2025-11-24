@@ -82,20 +82,24 @@ This repo just got a full refresh for no reason! 🎉
 
 ---
 
-<h3>⚙️ Safe Modern Mono+ Settings</h3>
+<h3>⚙️ General Modern Mono+ Settings</h3>
 
-| Box64 | 🏷️ | ✨ | 📝 |
-|:-:|:-:|:-:|-|
-| **STRONGMEM** | 1+ | Req | Uses safer memory ordering. |
-| **BIGBLOCK** | 2 | Rec | Uses small JIT blocks for stability. Lower values are more stable but slower. |
-| **CALLRET** | 0+ | Rec | Protects the call stack from broken JIT code. |
-| **WEAKBARRIER** | 1+ | Opt | Reduces the performance cost of `STRONGMEM`. Disable if the game crashes. |
+| Box64 | 🏷️ | 📝 |
+|:-:|:-:|-|
+| **STRONGMEM** | 1+ | Uses safer memory ordering. |
+| **BIGBLOCK** | 2+ | Uses small JIT blocks for stability. Lower values are more stable but slower. |
+| **CALLRET** | 0+ | Protects the call stack from broken JIT code. |
+| **WEAKBARRIER** | 1+ | Reduces the performance cost of `STRONGMEM`. Disable if the game crashes. |
 
-| FEXCore | 🏷️ | ✨ | 📝 |
-|:-:|:-:|:-:|-|
-| **TSOEnabled** | 1 | Req | Uses safer memory ordering. |
-| **SMCChecks** | FULL | Rec | Fully checks JIT code changes. Use `MTrack` only if `FULL` is too slow. |
-| **Multiblock** | 0+ | Rec | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable. |
+| FEXCore | 🏷️ | 📝 |
+|:-:|:-:|-|
+| **TSOEnabled** | 0+ | `1` is the most stable but slow. |
+| **SMCChecks** | MTrack+ | `Full` is the most stable but slow. |
+| **Multiblock** | 0+ | Try `1` only if the game stays stable. |
+| **VectorTSOEnabled** | 0 | TSO for vector ops. enable only to chase rare bugs. |
+| **HalfBarrierTSOEnabled** | 1 | Apply TSO only to unaligned “half-barrier” ops. |
+| **MemcpySetTSOEnabled**  | 0 | TSO for memcpy/memset. almost never worth enabling. |
+| **X87ReducedPrecision** | 1 | Use simplified x87 precision. may need `0` for old titles. |
 
 </details>
 
