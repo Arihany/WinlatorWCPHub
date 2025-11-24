@@ -205,7 +205,12 @@ resolve_standard_strategy() {
   local channel="$1" input_arg="$2"
   local strategy="$UNI_KIND"
   local ref ver_name filename short=""
-  local dc; dc="$(get_datecode)"
+  local dc=""
+
+  # datecode는 nightly에서만 필요하다
+  if [[ "$channel" == "nightly" ]]; then
+    dc="$(get_datecode)"
+  fi
 
   case "$strategy" in
     box64-bionic|wowbox64)
@@ -258,14 +263,17 @@ resolve_standard_strategy() {
       ;;
 
     dxvk*|vkd3d*)
-      # placeholder for dxvk vkd3d nigthly
+      # Nightly는 현재 미지원
       [[ "$channel" == "nightly" ]] && { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
       [[ -z "$input_arg" ]] && return 1
       
       ref="$input_arg"
       local base
-      if [[ "$ref" =~ ^v[0-9] ]]; then base="${ref#v}";
-      else base="$(sed -E 's/^[^0-9]+//' <<< "$ref")"; fi
+      if [[ "$ref" =~ ^v[0-9] ]]; then
+        base="${ref#v}"
+      else
+        base="$(sed -E 's/^[^0-9]+//' <<< "$ref")"
+      fi
       [[ -z "$base" ]] && base="$ref"
 
       local prefix="$strategy"
@@ -285,7 +293,6 @@ resolve_standard_strategy() {
 
 # Strategy B: GitLab DXVK-GPLASYNC
 resolve_gplasync_strategy() {
-  local channel="$1" 
   local prefix="$UNI_KIND"
   [[ "$prefix" != dxvk-gplasync* ]] && return 1
 
@@ -398,7 +405,7 @@ dispatch_logic() {
   # A. Special Handling: GPLAsync
   if [[ "$UNI_KIND" == dxvk-gplasync* ]]; then
     echo "::group::Strategy: GPLAsync ($UNI_KIND)"
-    resolve_gplasync_strategy "stable"
+    resolve_gplasync_strategy
     echo "::endgroup::"
     return
   fi
@@ -409,7 +416,6 @@ dispatch_logic() {
     has_nightly=true
   fi
 
-  # Helper: Get latest stable tag based on UNI_KIND rules
   # Scenario 1: Auto / Schedule
   if [[ "$IS_SCHEDULE" == "true" || "$IN_CHANNEL" == "auto" ]]; then
     echo "::group::Strategy: Auto/Schedule ($UNI_KIND)"
