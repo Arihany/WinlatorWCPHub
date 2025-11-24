@@ -4,7 +4,7 @@
 </p>
 
 <h3 align="center">Winlator WCP Hub</h3>
-<h4 align="center">Automated builds, Always up to date</h4>
+<h4 align="center">Transparent builds, Always up to date</h4>
 
 ---
  <sup>$\color{grey}{\texttt{This repo just got a full refresh for no reason! 🎉}}$</sup>
