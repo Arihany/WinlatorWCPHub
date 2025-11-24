@@ -204,7 +204,7 @@ find_latest_tag() {
 resolve_standard_strategy() {
   local channel="$1" input_arg="$2"
   local strategy="$UNI_KIND"
-  local ref ver_name ver_code filename short=""
+  local ref ver_name filename short=""
   local dc; dc="$(get_datecode)"
 
   case "$strategy" in
@@ -213,7 +213,6 @@ resolve_standard_strategy() {
         [[ -z "$input_arg" ]] && return 1
         ref="$input_arg"
         ver_name="${input_arg#v}"
-        ver_code="0"
         filename="${strategy}-${ver_name}.wcp"
       else
         ref="$(get_upstream_head_sha)"
@@ -234,7 +233,6 @@ resolve_standard_strategy() {
         fi
 
         ver_name="${dev_ver}-${dc}-${short}"
-        ver_code="0"
         filename="${strategy}-${ver_name}.wcp"
       fi
       ;;
@@ -244,7 +242,6 @@ resolve_standard_strategy() {
         [[ -z "$input_arg" ]] && return 1
         ref="$input_arg"
         ver_name="${input_arg#FEX-}"
-        ver_code="0"
         filename="FEXCore-${ver_name}.wcp"
       else
         ref="$(get_upstream_head_sha)"
@@ -256,7 +253,6 @@ resolve_standard_strategy() {
         base="${latest#FEX-}"
         
         ver_name="${base}-${dc}-${short}"
-        ver_code="0"
         filename="FEXCore-${ver_name}.wcp"
       fi
       ;;
@@ -276,7 +272,6 @@ resolve_standard_strategy() {
       [[ "$prefix" != *- ]] && prefix="${prefix}-"
       
       ver_name="$base"
-      ver_code="0"
       filename="${prefix}${base}.wcp"
       ;;
       
@@ -285,7 +280,7 @@ resolve_standard_strategy() {
       return 1
       ;;
   esac
-  echo "${ref}|${ver_name}|${ver_code}|${filename}|${short}"
+  echo "${ref}|${ver_name}|${filename}|${short}"
 }
 
 # Strategy B: GitLab DXVK-GPLASYNC
@@ -356,8 +351,8 @@ resolve_gplasync_strategy() {
     if grep -Fq "${base} ${rev}" "$existing_pairs_file"; then
       echo "  -> Skipped (Already exists: ${base}-${rev})" >&2; continue
     fi
-    # Format: ref|ver_name|ver_code|filename|short
-    add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|0|${prefix}-${base}-${rev}.wcp|"
+    # Format: ref|ver_name|filename|short
+    add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
   done < "$targets_file"
 }
 
@@ -370,7 +365,7 @@ HAS_WORK=false
 
 add_to_queue() {
   local channel="$1" raw_data="$2"
-  IFS='|' read -r ref ver_name ver_code filename short <<< "$raw_data"
+  IFS='|' read -r ref ver_name filename short <<< "$raw_data"
 
   local assets
   assets="$(get_assets_cached "$channel")"
@@ -391,7 +386,7 @@ add_to_queue() {
   fi
 
   echo "  -> Queued: $filename" >&2
-  QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${ver_code}|${rel_tag}|${filename}|${short}"$'\n'
+  QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${rel_tag}|${filename}|${short}"$'\n'
   HAS_WORK=true
 }
 
