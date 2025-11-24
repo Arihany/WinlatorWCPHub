@@ -82,7 +82,7 @@ This repo just got a full refresh for no reason! 🎉
 
 ---
 
-<h3>⚙️ General Modern Mono+ Settings</h3>
+<h3>⚙️ Safe Modern Mono+ Settings</h3>
 
 | Box64 | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
@@ -93,7 +93,7 @@ This repo just got a full refresh for no reason! 🎉
 
 | FEXCore | 🏷️ | ✨ | 📝 |
 |:-:|:-:|:-:|-|
-| **TSOEnabled** | 1 | Req | Uses safer memory ordering. Requires hardware TSO support. |
+| **TSOEnabled** | 1 | Req | Uses safer memory ordering. |
 | **SMCChecks** | FULL | Rec | Fully checks JIT code changes. Use `MTrack` only if `FULL` is too slow. |
 | **Multiblock** | 0+ | Rec | Disables merging multiple JIT code chunks into one big block. try `1` only if the game stays stable. |
 
