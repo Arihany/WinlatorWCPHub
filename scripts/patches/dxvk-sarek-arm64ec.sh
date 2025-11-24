@@ -123,7 +123,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 3) d3d9_device.cpp: x87 fnstcw/fldcw asm -> x86
+# 3) d3d9_device.cpp: initialize FPU control word to silence -Wuninitialized
 # ---------------------------------------------------------------------------
 D3D9_FILE="$ROOT/src/d3d9/d3d9_device.cpp"
 if [[ -f "$D3D9_FILE" ]]; then
@@ -133,43 +133,56 @@ import sys, pathlib
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
-old_fnstcw = '    __asm__ __volatile__("fnstcw %0" : "=m" (*&control));'
-old_fldcw  = '    __asm__ __volatile__("fldcw %0" : : "m" (*&control));'
+old_decl = '    uint16_t control;\n'
+new_decl = '    uint16_t control = 0;\n'
 
-new_fnstcw = '''#if defined(__i386__) || defined(_M_IX86)
-    __asm__ __volatile__("fnstcw %0" : "=m" (*&control));
-#else
-    (void)control;
-#endif'''
-
-new_fldcw = '''#if defined(__i386__) || defined(_M_IX86)
-    __asm__ __volatile__("fldcw %0" : : "m" (*&control));
-#endif'''
-
-changed = False
-
-if old_fnstcw in text:
-    text = text.replace(old_fnstcw, new_fnstcw)
-    changed = True
-else:
-    print("::warning::fnstcw pattern not found in d3d9_device.cpp")
-
-if old_fldcw in text:
-    text = text.replace(old_fldcw, new_fldcw)
-    changed = True
-else:
-    print("::warning::fldcw pattern not found in d3d9_device.cpp")
-
-if changed:
+if old_decl in text:
+    text = text.replace(old_decl, new_decl, 1)
     path.write_text(text, encoding="utf-8")
-    print("Patched d3d9_device.cpp: guarded x87 asm with x86-only #if")
+    print("Patched d3d9_device.cpp: initialized FPU control word")
+else:
+    print("::warning::d3d9_device.cpp: control declaration pattern not found; skip FPU init patch")
 PY
 else
   echo "::warning::d3d9_device.cpp not found, skipping D3D9 FPU patch"
 fi
 
 # ---------------------------------------------------------------------------
-# 4) meson.build: dxvk_version vcs_tag dirty suffix -> -async-Arm64EC
+# 4) dxvk_pipecompiler.h: fix struct/class mismatched-tags for MS ABI
+# ---------------------------------------------------------------------------
+PIPE_FILE="$ROOT/src/dxvk/dxvk_pipecompiler.h"
+if [[ -f "$PIPE_FILE" ]]; then
+  "$PYTHON" - "$PIPE_FILE" <<'PY'
+import sys, pathlib, re
+
+path = pathlib.Path(sys.argv[1])
+text = path.read_text(encoding="utf-8", errors="ignore")
+
+patterns = [
+    (r'\bclass\s+DxvkGraphicsPipelineStateInfo\b', 'struct DxvkGraphicsPipelineStateInfo'),
+    (r'\bclass\s+DxvkComputePipelineStateInfo\b', 'struct DxvkComputePipelineStateInfo'),
+]
+
+changed = False
+for pat, repl in patterns:
+    new_text, n = re.subn(pat, repl, text)
+    if n:
+        changed = True
+        text = new_text
+
+if changed:
+    path.write_text(text, encoding="utf-8")
+    print("[OK] dxvk_pipecompiler.h: forward decls switched to struct")
+else:
+    print("::warning::dxvk_pipecompiler.h: no class forward decls found to patch")
+PY
+else
+  echo "::warning::dxvk_pipecompiler.h not found, skipping mismatched-tags patch"
+fi
+
+
+# ---------------------------------------------------------------------------
+# 5) meson.build: dxvk_version vcs_tag dirty suffix -> -async-Arm64EC
 # ---------------------------------------------------------------------------
 MESON_FILE="$ROOT/meson.build"
 if [[ -f "$MESON_FILE" ]]; then
@@ -194,7 +207,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5) version.h.in: legacy HUD tag '-arm64ec' (may be overridden by vcs_tag)
+# 6) version.h.in: legacy HUD tag '-arm64ec' (may be overridden by vcs_tag)
 # ---------------------------------------------------------------------------
 VER_IN="$ROOT/version.h.in"
 if [[ -f "$VER_IN" ]]; then
@@ -226,7 +239,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5) export
+# 7) export
 # ---------------------------------------------------------------------------
 export MOCK_DIR
 export SHIM_FILE="$FINAL_HEADER"
