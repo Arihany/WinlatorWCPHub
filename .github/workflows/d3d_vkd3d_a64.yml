@@ -88,7 +88,7 @@ jobs:
           cd src
           git fetch --tags --force
 
-          while IFS='|' read -r kind channel ref ver_name ver_code rel_tag filename short; do
+          while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
             [[ -n "$kind" ]] || continue
 
             if [[ -z "$ref" ]]; then
