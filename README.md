@@ -62,7 +62,7 @@
 | **Box64** | More friendly to weaker devices and aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
 | **WowBox64** | Helps 32-bit Windows games run inside 64-bit Wine by bridging their old 32-bit calls to the 64-bit host. |
 
-- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN`, `BOX64_FASTROUND`, `BOX64_X87DOUBLE`, and `FEX_X87REDUCEDPRECISION`.
+- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN` `BOX64_FASTROUND` `BOX64_X87DOUBLE` `FEX_X87REDUCEDPRECISION`
 
 ---
 
