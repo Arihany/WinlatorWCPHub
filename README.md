@@ -69,7 +69,7 @@
 </details>
 
 <details>
-<summary>🧐 UNITY SETTINGS</summary>
+<summary>🧐 <b>UNITY SETTINGS</b></summary>
 
 ---
 
