@@ -10,6 +10,10 @@ on:
       version:
         type: string
         description: "(e.g. v2.4, v2.5.1). Empty = latest"
+      force:
+        type: boolean
+        default: false
+        description: "Force build v2.4.1 pre-reg only"
 
   schedule:
     - cron: "0 17 * * *"
@@ -41,8 +45,8 @@ jobs:
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
-      missing: ${{ steps.check.outputs.missing }}
-      list:    ${{ steps.check.outputs.list }}
+      missing:     ${{ steps.override.outputs.missing || steps.check.outputs.missing }}
+      list:        ${{ steps.override.outputs.list    || steps.check.outputs.list    }}
     steps:
 
       - name: Checkout
@@ -50,8 +54,14 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Force Build
+        id: override
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true }}
+        run: bash ./scripts/forcebuild/dxvk-241-pr.sh
+
       - name: Check Upstream & Queue
         id: check
+        if: ${{ ! (github.event_name == 'workflow_dispatch' && inputs.force == true) }}
         run: bash ./scripts/guard.sh
 
   build:
@@ -105,12 +115,10 @@ jobs:
               git reset --hard
               git clean -fdx
               git checkout -f "$ref"
-
-              # 1.1 Submodule
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patch & arm64ec Hud
+              # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
               git config --global --add safe.directory "$(pwd)"
@@ -124,54 +132,11 @@ jobs:
               git tag -d "$ref" 2>/dev/null || true
               git tag -a -f "$NEW_TAG" -m "ARM64EC-Build"
 
-              # 3. Build Process (Custom for ARM64EC)
-              ../.venv/bin/meson --version || true
-              PKG_ROOT="../pkg_temp/${UNI_KIND}-${ref}"
-              rm -rf "${PKG_ROOT}"
-              mkdir -p "${PKG_ROOT}"
-
-              rm -rf build_x86 build_ec
-
-              # 3-1. Build x86 (Standard 32-bit)
-              echo "Compiling x86 (32-bit)..."
-              meson setup build_x86 \
-                --cross-file build-win32.txt \
-                --buildtype release \
-                --prefix "$PWD/${PKG_ROOT}/x32"
-              ninja -C build_x86 install
-
-              # 3-2. Build ARM64EC (Replaces x64)
-              echo "Compiling ARM64EC..."
-              meson setup build_ec \
-                --cross-file ../toolchains/arm64ec.meson.ini \
-                --buildtype release \
-                --prefix "$PWD/${PKG_ROOT}/arm64ec"
-              ninja -C build_ec install
-
-              # 4. Resolve source dirs
-              WCP_DIR="../${REL_TAG_STABLE}_WCP"
-              rm -rf "$WCP_DIR"
-
-              SRC_EC="${PKG_ROOT}/arm64ec"
-              SRC_32="${PKG_ROOT}/x32"
-
-              # Prefer /bin subfolder if present
-              if [[ -d "$SRC_EC/bin" ]]; then
-                SRC_EC="$SRC_EC/bin"
-              fi
-
-              if [[ -d "$SRC_32/bin" ]]; then
-                SRC_32="$SRC_32/bin"
-              fi
-
-              # 5. Pack WCP
-              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
-              bash ../scripts/packing.sh \
-                "$SRC_EC" \
-                "$SRC_32" \
-                "$WCP_DIR" \
+              # 3. Build & Prepare for Packing
+              bash ../scripts/guts-arm64ec.sh \
+                "$ref" \
                 "$ver_name" \
-                "../out/${filename}"
+                "$filename"
             
               echo "::endgroup::"
             } 2>&1 | tee "$LOG_PATH"
@@ -198,6 +163,7 @@ jobs:
           BODY: |
             - Architecture: Arm64EC (system32) + x86 (syswow64)
             - **Exclusive to FEX**
+            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
         run: bash ./scripts/release.sh
 
   bump-readme:

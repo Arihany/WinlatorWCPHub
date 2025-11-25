@@ -9,7 +9,11 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(e.g. v2.4-1, v2.7.1-1). Empty = auto"
+        description: "(e.g. v2.4.1-1, v2.7.1-1). Empty = auto"
+      force:
+        type: boolean
+        default: false
+        description: "Force build v2.4.1-1 pre-reg only"
 
   schedule:
     - cron: "0 17 * * *"
@@ -42,8 +46,8 @@ jobs:
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
-      missing: ${{ steps.check.outputs.missing }}
-      list:    ${{ steps.check.outputs.list }}
+      missing:     ${{ steps.override.outputs.missing || steps.check.outputs.missing }}
+      list:        ${{ steps.override.outputs.list    || steps.check.outputs.list    }}
     steps:
 
       - name: Checkout
@@ -51,8 +55,14 @@ jobs:
         with:
           fetch-depth: 1
 
+      - name: Force Build
+        id: override
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true }}
+        run: bash ./scripts/forcebuild/dxvk-gpl-241-pr.sh
+
       - name: Check Upstream & Queue
         id: check
+        if: ${{ ! (github.event_name == 'workflow_dispatch' && inputs.force == true) }}
         run: bash ./scripts/guard.sh
 
   build:
@@ -63,6 +73,7 @@ jobs:
     timeout-minutes: 60
     env:
       GPLASYNC_BASE_URL: https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches
+      FORCE_PRE_REG: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
     steps:
 
       - name: Checkout
@@ -99,11 +110,21 @@ jobs:
               continue
             fi
 
-            DXVK_BASE="${ver_name%-*}"    # -> "2.7.1"
-            GPL_REV="${ver_name##*-}"     # -> "1"
+            RAW_BASE="${ver_name%-*}"
+            GPL_REV="${ver_name##*-}"
             
-            GPL_TAG="${ref}"              # v2.7.1-1
-            DXVK_REF="v${DXVK_BASE}"      # v2.7.1
+            DXVK_BASE="$RAW_BASE"
+            if [[ "$DXVK_BASE" == pre-reg-* ]]; then
+              DXVK_BASE="${DXVK_BASE#pre-reg-}"
+            fi
+            
+            GPL_TAG="${ref}"
+            
+            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" ]]; then
+              DXVK_REF="$ref"
+            else
+              DXVK_REF="v${DXVK_BASE}"
+            fi
 
             LOG_PATH="../_logs/${UNI_KIND}-${DXVK_BASE}-${GPL_REV}.log"
 
@@ -114,20 +135,44 @@ jobs:
               git reset --hard
               git clean -fdx
               git checkout -f "$DXVK_REF"
-
-              # 1.1 Submodule
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patches & Build
+              # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
-              PATCH_NAME="dxvk-gplasync-${DXVK_BASE}-${GPL_REV}.patch"
-              PATCH_LOCAL="../patches/${PATCH_NAME}"
+              if [[ "${FORCE_PRE_REG:-false}" == "true" ]]; then
+                PATCH_LOCAL="../scripts/patches/dxvk-gplasync-2.4.1-1-pre-reg.patch"
+                echo "Using local pre-regression GPLAsync patch: ${PATCH_LOCAL}"
+              else
+                PATCH_NAME="dxvk-gplasync-${DXVK_BASE}-${GPL_REV}.patch"
+                PATCH_LOCAL="../patches/${PATCH_NAME}"
 
-              echo "Downloading GPLAsync patch: ${PATCH_NAME}"
-              curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"
+                echo "Downloading GPLAsync patch: ${PATCH_NAME}"
+
+                if ! curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"; then
+                  if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" ]]; then
+                    echo "::warning::Primary GPLAsync patch '${PATCH_NAME}' not found, falling back to 'dxvk-gplasync-2.4-1.patch' for 2.4.1-1" >&2
+
+                    PATCH_NAME="dxvk-gplasync-2.4-1.patch"
+                    PATCH_LOCAL="../patches/${PATCH_NAME}"
+
+                    echo "Downloading fallback GPLAsync patch: ${PATCH_NAME}"
+                    curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"
+                  else
+                    echo "::error::Failed to download GPLAsync patch for ${DXVK_BASE}-${GPL_REV}" >&2
+                    exit 1
+                  fi
+                fi
+              fi
+
+              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-gplasync'/g" "$PATCH_LOCAL" || true
+              sed -i 's/--dirty=-[^"]*gplasync"/--dirty=-gplasync"/g' "$PATCH_LOCAL" || true
+
               patch -p1 < "${PATCH_LOCAL}"
+
+              # 3. Build (Upstream)
+              ../.venv/bin/meson --version || true
 
               PKG_ROOT="../pkg_temp"
               rm -rf "${PKG_ROOT}"
@@ -137,8 +182,8 @@ jobs:
 
               ./package-release.sh "${PKG_VERSION}" "$PKG_ROOT" --no-package
 
-              # 3. Resolve Source Directories
-              SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}"   # dxvk-gplasync-v2.7.1-1
+              # 4. Resolve Source Directories - fixed path
+              SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}" 
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
 
@@ -155,7 +200,7 @@ jobs:
                 SRC_32="$SRC_ROOT/x86"
               fi
 
-              # 4. Pack WCP
+              # 5. Pack WCP
               PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
               bash ../scripts/packing.sh \
                 "$SRC_64" \
@@ -189,6 +234,7 @@ jobs:
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
             - **General-purpose x64/x86 build**
+            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
         run: bash ./scripts/release.sh
 
   bump-readme:

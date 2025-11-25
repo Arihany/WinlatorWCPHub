@@ -102,32 +102,29 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout                               async branch
+              # 1. Clean & Checkout Async branch
               git reset --hard
               git clean -fdx
-              
               git fetch origin "$UPSTREAM_BRANCH"
               git checkout -B "$UPSTREAM_BRANCH" "origin/$UPSTREAM_BRANCH"
-              
-              # 1.1 Submodule
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patch
+              # 2. Apply patches
               bash ../scripts/patches/dxvk.sh .
-              DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek-arm64ec.sh .
+              DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek.sh .
 
               # 3. Build (Upstream)
               ../.venv/bin/meson --version || true
 
               PKG_ROOT="../pkg_temp"
-              rm -rf "${PKG_ROOT}/dxvk-async-${ref}"              #PATH Hardcoded
-              mkdir -p "$PKG_ROOT"
+              rm -rf "${PKG_ROOT}"
+              mkdir -p "${PKG_ROOT}"
 
               ./package-release.sh "$ref" "$PKG_ROOT" --no-package
 
-              # 4. Resolve Source Directories
-              SRC_ROOT="${PKG_ROOT}/dxvk-async-${ref}"            #PATH Hardcoded
+              # 4. Resolve Source Directories - fixed path
+              SRC_ROOT="${PKG_ROOT}/dxvk-async-${ref}"
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
 

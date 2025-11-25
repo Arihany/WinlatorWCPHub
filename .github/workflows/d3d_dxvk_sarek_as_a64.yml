@@ -102,75 +102,23 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout                              async branch
+              # 1. Clean & Checkout Async branch
               git reset --hard
               git clean -fdx
-              
               git fetch origin "$UPSTREAM_BRANCH"
               git checkout -B "$UPSTREAM_BRANCH" "origin/$UPSTREAM_BRANCH"
-              
-              # 1.1 Submodule
               git submodule sync --recursive
               git submodule update --init --recursive
 
               # 2. Apply patches
               bash ../scripts/patches/dxvk.sh .
-              . ../scripts/patches/dxvk-sarek-arm64ec.sh .
+              . ../scripts/patches/dxvk-sarek.sh .
 
-              # 3. Build Process (Custom for ARM64EC)
-              ../.venv/bin/meson --version || true
-              PKG_ROOT="../pkg_temp/${UNI_KIND}-${ref}"
-              rm -rf "${PKG_ROOT}"
-              mkdir -p "${PKG_ROOT}"
-
-              rm -rf build_x86 build_ec
-
-              # 3-1. Build x86 (Standard 32-bit)
-              echo "Compiling x86 (32-bit)..."
-              meson setup build_x86 \
-                --cross-file build-win32.txt \
-                --buildtype release \
-                --prefix "$PWD/${PKG_ROOT}/x32"
-              ninja -C build_x86 install
-
-              # 3-2. Build ARM64EC (Replaces x64)
-              echo "Compiling ARM64EC..."
-              # shim flag
-              ARGS_FLAGS="-I$MOCK_DIR -include sarek_all_in_one.h"
-              
-              CFLAGS="${CFLAGS:-}" \
-              CXXFLAGS="$ARGS_FLAGS ${CXXFLAGS:-}" \
-              meson setup build_ec \
-                --cross-file ../toolchains/arm64ec.meson.ini \
-                --buildtype release \
-                --prefix "$PWD/${PKG_ROOT}/arm64ec" \
-                -Dcpp_args="$ARGS_FLAGS"
-              ninja -C build_ec install
-
-              # 4. Resolve source dirs
-              WCP_DIR="../${REL_TAG_STABLE}_WCP"
-              rm -rf "$WCP_DIR"
-
-              SRC_EC="${PKG_ROOT}/arm64ec"
-              SRC_32="${PKG_ROOT}/x32"
-
-              # Prefer /bin subfolder if present
-              if [[ -d "$SRC_EC/bin" ]]; then
-                SRC_EC="$SRC_EC/bin"
-              fi
-
-              if [[ -d "$SRC_32/bin" ]]; then
-                SRC_32="$SRC_32/bin"
-              fi
-
-              # 5. Pack WCP
-              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
-              bash ../scripts/packing.sh \
-                "$SRC_EC" \
-                "$SRC_32" \
-                "$WCP_DIR" \
+              # 3. Build & Prepare for Packing
+              bash ../scripts/guts-arm64ec.sh \
+                "$ref" \
                 "$ver_name" \
-                "../out/${filename}"
+                "$filename"
             
               echo "::endgroup::"
             } 2>&1 | tee "$LOG_PATH"
