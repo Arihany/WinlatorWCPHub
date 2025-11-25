@@ -21,7 +21,7 @@
 >
 > ### Winlator is an Android app created by [brunodev85](https://github.com/brunodev85). 
 >  
-> It runs Windows software inside a glibc-based environment built around Wine and Box64. It follows a conservative, tightly integrated design that favors stability and predictable performance over aggressive experimentation.
+> It runs Windows software inside a glibc-based environment built around Wine and Box64. It follows a conservative, tightly integrated design that favors stability, predictable performance, and good behavior on low-end devices over aggressive experimentation.
 >
 > ---
 >
@@ -58,9 +58,11 @@
 
 | Type | 📝 |
 |:-:|-|
-| **FEXCore** | Focuses on accuracy and modern titles, offering strong compatibility and stable behavior for demanding games. It’s best to use the latest Bionic build. |
-| **Box64** | Known for its speed and flexibility. Great for older titles or for squeezing extra performance out of specific hardware through extensive dynarec tuning. |
-| **WowBox64** | A 32-bit x86 Windows guest library that is loaded inside the Wine environment, thunking 32-bit Windows API calls to the 64-bit host. |
+| **FEXCore** | Prioritizes accuracy. On reasonably modern setups it can give you very good compatibility without too much fuss, and pairing it with Arm64EC hides a lot of the overhead. It’s best to use the latest Bionic build. |
+| **Box64** | More friendly to weaker devices and aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
+| **WowBox64** | Helps 32-bit Windows games run inside 64-bit Wine by bridging their old 32-bit calls to the 64-bit host. |
+
+- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN`, `BOX64_FASTROUND`, `BOX64_X87DOUBLE`, and `FEX_X87REDUCEDPRECISION`.
 
 ---
 
@@ -73,34 +75,33 @@
 
 ### 🧠 Unity scripting backends
 
-| Backend | 🔍 | 📝 |
-|:-:|:-:|-|
-| **Old Mono** | `UnityEngine.dll` | ❌ Very cumbersome, and even when it runs the performance drop is severe. |
-| **Mono** | `Assembly-CSharp.dll` | 🟡 Used by most Unity games. Performance varies, but it generally runs. |
-| **IL2CPP** | `GameAssembly.dll` | 🟢 Performs well and usually tolerates more aggressive settings without issues. |
+| Backend | 🔍 | 🫩 | 📝 |
+|:-:|:-:|:-:|-|
+| **Old Mono** | `UnityEngine.dll` | ❌ | Very cumbersome, and even when it runs the performance drop is severe. |
+| **Mono** | `Assembly-CSharp.dll` `/MonoBleedingEdge` | 🟡 | Used by most Unity games. Performance varies, but it generally runs. |
+| **IL2CPP** | `GameAssembly.dll` | 🟢 | Performs well and tolerates more aggressive settings in most cases. |
 
 ---
 
-### ⚙️ General Modern Mono+ Settings
-
-| Box64 | 🏷️ | 📝 |
-|:-:|:-:|-|
-| **SAFEFLAGS** | `1` | Keep as is. Higher values are usually too slow to be worth it. |
-| **STRONGMEM** | `1` | Required for many Unity games. Higher values are usually too slow to be worth it. |
-| **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
-| **BIGBLOCK** | `2` | Lower values are more stable. Official recommendation is `0` but `2` is usually still safe. |
-| **CALLRET** | `0` | `1` might help performance, but the gain is modest. |
-| **WAIT** | `1` | `0` can improve performance but may cause instability. |
-| **DIRTY** | `0` | Keep as is. |
-| **MMAP32** | `1` | Good for performance. Set to `0` only if it clearly causes issues. |
+### ⚙️ General Modern Mono Settings
 
 | FEXCore | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **TSOEnabled** | `1` | Required for many Unity games. You can test `0` to improve performance. |
-| **HalfBarrierTSOEnabled** | `1` | Keep enabled for correctness. Set to `0` only for experimental performance tuning. |
-| **Multiblock** | `0` | Set to `1` only if the game is already stable and you want more performance. |
-| **SMCChecks** | `MTrack` | Keep as is. Higher values are usually too slow to be worth it. |
-| **X87ReducedPrecision** | `1` | Set to `0` for older titles or if subtle bugs occur. |
+| **TSO** | `1` | Keep as is. Set to `0` only for extreme performance experiments. |
+| **MEMCPYSETTSO** | `0` | If you still get crashes/freezes with `TSO = 1`, set this to `1`. | 
+| **VECTORTSO** | `0` | If you still get crashes/freezes with `TSO = 1` and `MEMCPYSETTSO = 1`, set this to `1`. Very heavy. |
+| **HalfBarrierTSO** | `1` | Keep as is. |
+| **Multiblock** | `0` | Once TSO-related settings are stable, you can try `1` for potential performance gains. |
+
+| Box64 | 🏷️ | 📝 |
+|:-:|:-:|-|
+| **SAFEFLAGS** | `1` | If you still get crashes or freezes, set this to `2`. Very heavy. |
+| **STRONGMEM** | `1` | If you still get crashes or freezes, set this to `2`. Very heavy. |
+| **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
+| **BIGBLOCK** | `2` | Official recommendation is `0`, but `2` often works fine in practice. |
+| **FORWARD** | `128` | You can try `256`. Higher values mainly increase the risk of subtle, unpredictable side effects. |
+| **CALLRET** | `0` | Keep as is. |
+| **WAIT** | `1` | `0` might help performance in heavily multithreaded or JIT-heavy workloads. |
 
 </details>
 
