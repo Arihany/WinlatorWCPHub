@@ -90,7 +90,7 @@
 | **TSO** | `1` | Keep as is. Set to `0` only for extreme performance experiments. |
 | **MEMCPYSETTSO** | `0` | If you still get crashes/freezes with `TSO = 1`, set this to `1`. | 
 | **VECTORTSO** | `0` | If you still get crashes/freezes with `TSO = 1` `MEMCPYSETTSO = 1`, set this to `1`. Very heavy. |
-| **HalfBarrierTSO** | `1` | Keep as is. |
+| **HALFBARRIERTSO** | `1` | Keep as is. |
 | **Multiblock** | `0` | Once TSO-related settings are stable, you can try `1` for potential performance gains. |
 
 | Box64 | 🏷️ | 📝 |
