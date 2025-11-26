@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./img.png" width="220">
+  <img src="./img.png" width="180">
 </p>
 
 <h3 align="center">Winlator WCP Hub</h3>
