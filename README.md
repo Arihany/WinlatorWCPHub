@@ -39,9 +39,9 @@
 > 
 > - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
-> </details>
->
 > ---
+> 
+> </details>
 > 
 > If anything is broken or missing, please let me know 🫡
 
