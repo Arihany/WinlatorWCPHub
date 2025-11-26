@@ -3,7 +3,6 @@
 </p>
 
 <h3 align="center">Winlator WCP Hub</h3>
-<h4 align="center">Transparent builds, always up to date</h4>
 
 ---
 
