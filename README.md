@@ -97,15 +97,13 @@
 
 | Box64 | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **SAFEFLAGS** | `1` | If you still get crashes or freezes, set this to `2`. Very heavy. |
-| **STRONGMEM** | `1` | If you still get crashes or freezes, set this to `2`. Very heavy. |
+| **SAFEFLAGS** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
+| **STRONGMEM** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
 | **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
 | **BIGBLOCK** | `2` | Official recommendation is `0`, but `2` often works fine in practice. |
 | **FORWARD** | `128` | You can try `256`. Higher values mainly increase the risk of subtle, unpredictable side effects. |
 | **CALLRET** | `0` | Keep as is. |
 | **WAIT** | `1` | `0` might help performance in heavily multithreaded or JIT-heavy workloads. |
-
-- 
 
 </details>
 
