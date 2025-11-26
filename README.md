@@ -201,7 +201,7 @@ Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX
 WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credits belong to the original authors.
 <br><br>
 
-FEX [Billy Laws](https://github.com/bylaws)<br>
+FEXCore [FEX-Emu](https://github.com/FEX-Emu)<br>
 Box64 [ptitSeb](https://github.com/ptitSeb)<br>
 DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
 DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
