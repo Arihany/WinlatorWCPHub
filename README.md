@@ -35,7 +35,7 @@
 > |:-:|-|
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. |
-> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Keeps up with the latest upstream code, combines CMod features with additional QoL improvements. |
+> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Keeps up with the latest upstream code, combines CMod features with additional QoL improvements. It supports various wrappers. |
 > 
 > - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
@@ -81,6 +81,8 @@
 | **Mono** | `Assembly-CSharp.dll` `/MonoBleedingEdge` | 🟡 | Used by most Unity games. Performance varies, but it generally runs. |
 | **IL2CPP** | `GameAssembly.dll` | 🟢 | Performs well and tolerates more aggressive settings in most cases. |
 
+- You can identify each backend by the folders and files it is located in 🔍
+
 ---
 
 ### ⚙️ General Modern Mono Settings
@@ -102,6 +104,8 @@
 | **FORWARD** | `128` | You can try `256`. Higher values mainly increase the risk of subtle, unpredictable side effects. |
 | **CALLRET** | `0` | Keep as is. |
 | **WAIT** | `1` | `0` might help performance in heavily multithreaded or JIT-heavy workloads. |
+
+- 
 
 </details>
 
@@ -126,8 +130,8 @@
 | **gplasync** | `gpl` cache + `async` shader compilation to smooth out shader hitches and visible stutter. |
 | **Arm64EC**  | Designed to be paired with `FEXCore` to cut down translation work and keep overhead lower. |
 
-- Running the very latest version isn’t always an improvement.
-
+- DXVK v2.5 and later may show reduced performance when used with the Turnip driver.
+  
 </details>
 
 ---
@@ -142,9 +146,9 @@
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx. |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx. |
-| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx). |
+| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
+| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
+| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx) |
 
 
 <details>
