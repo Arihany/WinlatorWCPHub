@@ -138,9 +138,6 @@ jobs:
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patches & add hud
-              bash ../scripts/patches/dxvk.sh .
-
               # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
