@@ -10,7 +10,11 @@
 > <details>
 >  <summary><b>What does this hub do?</b></summary><br>
 >
-> **Winlator WCP Hub** uses an open, automated build pipeline to distribute essential WCP packages along with some useful details. Honestly, I mostly made it for my own peace of mind. 😌
+> **Winlator WCP Hub** uses an open automated build pipeline to distribute essential `wcp` packages and provide simple, useful information about each type.
+>
+> Here, `wcp` refers to a custom package format used in the Winlator-Bionic fork to install components. It makes it easy to test a wide range of newer and experimental builds.
+>
+> Honestly, I mostly made it for my own peace of mind. 😌
 >  
 > ---
 > 
@@ -26,7 +30,7 @@
 >
 > ### Winlator-Bionic is a community fork based on [Pipetto-crypto](https://github.com/Pipetto-crypto)’s project.
 >
-> It runs closer to Android’s native stack, using a more direct Vulkan path that can reduce overhead and improve performance on many devices. It supports both Box64 and FEXCore/Arm64EC containers and lets users mix and match components such as Wine builds and graphics layers through modular WCP packages. The project actively experiments with new features and configurations.
+> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/Arm64EC containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`. The project actively experiments with new features and configurations.
 > 
 > --- 
 >
@@ -41,8 +45,8 @@
 > ---
 > 
 > </details>
-> 
-> If anything is broken or missing, please let me know 🫡
+
+If anything is broken or missing, please let me know 🫡
 
 ---
 
@@ -147,9 +151,9 @@
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite (a8xx), Mesa turnip driver for a6xx - a7xx |
-| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite (a8xx) |
+| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite `a8xx`, Mesa turnip driver for `a6xx` `a7xx` |
+| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite `a8xx`, Mesa turnip driver for `a6xx` `a7xx` |
+| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite `a8xx` |
 
 
 <details>
@@ -200,7 +204,7 @@ Third-party components used for packaging (such as DXVK, Wine, vkd3d-proton, FEX
 WCP packages redistribute unmodified (or minimally patched) binaries, and all copyrights and credits belong to the original authors.
 <br><br>
 
-FEXCore [FEX-Emu](https://github.com/FEX-Emu)<br>
+FEX [FEX-Emu](https://github.com/FEX-Emu)<br>
 Box64 [ptitSeb](https://github.com/ptitSeb)<br>
 DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
 DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
