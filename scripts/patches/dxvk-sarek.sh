@@ -1,3 +1,5 @@
+# TODO: Clean this up into a proper py later
+
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
