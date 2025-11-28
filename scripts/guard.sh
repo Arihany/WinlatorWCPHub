@@ -1,5 +1,8 @@
 #  /\_/\
 # (=•ᆽ•=)づ︻╦╤─
+
+# TODO: Move guard logic to py, integrate the pre-reg into the core strategy
+
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
