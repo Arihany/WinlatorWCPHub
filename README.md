@@ -47,8 +47,9 @@
 > 
 > </details>
 
-- If anything is broken or missing, please let me know!
--️ GameNative currently has a bug where wcp isn’t applied correctly. It should be fixed in the next release.
+- If anything is broken or missing, please let me know!<br>
+- GameNative currently has a bug where wcp isn’t applied correctly It should be fixed in the next release.
+
 
 ---
 
