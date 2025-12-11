@@ -39,6 +39,7 @@
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. |
 > | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | Keeps up with the latest upstream code, combines CMod features with additional QoL improvements. It supports various wrappers. |
+> | [**GameNative**](https://github.com/utkarshdalal/GameNative/releases)) | Supports both glibc and bionic, with a sleek UI and great performance. |
 > 
 > - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
