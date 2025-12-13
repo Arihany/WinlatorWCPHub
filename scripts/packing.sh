@@ -1,27 +1,37 @@
+#!/usr/bin/env bash
 #  /\_/\
 # (=•ᆽ•=)づ📦
-#!/usr/bin/env bash
+
 set -Eeuo pipefail
 shopt -s nullglob
 
-# -----------------------------------------------------------------------------
-# 1. Validation & Setup
-# -----------------------------------------------------------------------------
-required_commands=("jq" "tar" "zstd")
-for cmd in "${required_commands[@]}"; do
-  if ! command -v "$cmd" &> /dev/null; then
-    echo "::error::Command '$cmd' is required but not installed."
-    exit 1
-  fi
-done
+die()  { echo "::error::$*" >&2; exit 1; }
+warn() { echo "::warning::$*" >&2; }
+note() { echo "::notice::$*" >&2; }
+dbg()  { [[ "${WCP_DEBUG:-0}" == "1" ]] && echo "====[WCP DEBUG] $*" >&2 || true; }
 
-# llvm-strip availability (optional)
-if command -v llvm-strip &> /dev/null; then
+have_cmd() { command -v "$1" >/dev/null 2>&1; }
+need_cmd() { have_cmd "$1" || die "Command '$1' is required but not installed."; }
+
+need_cmd jq
+need_cmd tar
+need_cmd zstd
+
+tar --help 2>/dev/null | grep -q -- '--zstd' || die "tar does not support --zstd on this runner."
+TAR_SORT_OPT=()
+if tar --help 2>/dev/null | grep -q -- '--sort'; then
+  TAR_SORT_OPT=(--sort=name)
+else
+  warn "tar does not support --sort=name (archive order might vary)."
+fi
+
+# llvm-strip
+if have_cmd llvm-strip; then
   HAVE_LLVM_STRIP=1
   echo "llvm-strip found; symbols will be stripped during packing."
 else
   HAVE_LLVM_STRIP=0
-  echo "::warning::llvm-strip not found; skipping symbol stripping."
+  warn "llvm-strip not found; skipping symbol stripping."
 fi
 
 # Arguments
@@ -32,8 +42,7 @@ VERSION_NAME="${4:?versionName is required}"
 OUT_PATH="${5:?output_wcp_path is required}"
 PROFILE_SH="${PROFILE_SH:?PROFILE_SH env var is required}"
 
-# Load Profile
-# shellcheck source=/dev/null
+# Load profile (must define WCP_TYPE / WCP_DESC at least)
 source "$PROFILE_SH"
 
 : "${WCP_TYPE:?WCP_TYPE not set in profile}"
@@ -63,22 +72,16 @@ else
   FINAL_VER_NAME="${WCP_VERSION_PREFIX}${VERSION_NAME}${WCP_VERSION_SUFFIX}"
 fi
 
-# WCP DEBUG: profile & version resolution =====
-{
-  echo "====[WCP DEBUG] PROFILE_SH='${PROFILE_SH}'"
-  echo "====[WCP DEBUG] Profile vars after source:"
+dbg "PROFILE_SH='${PROFILE_SH}'"
+if [[ "${WCP_DEBUG:-0}" == "1" ]]; then
+  dbg "Profile vars after source:"
   declare -p WCP_SINGLE_BIN_NAME WCP_SINGLE_BIN_TARGET WCP_TYPE WCP_DESC \
             WCP_VERSION_CODE WCP_VERSION_CODE_DEFAULT \
-            WCP_VERSION_PREFIX WCP_VERSION_SUFFIX 2>/dev/null || true
-  echo "====[WCP DEBUG] Version inputs:"
-  echo "    VERSION_NAME='${VERSION_NAME}'"
-  echo "====[WCP DEBUG] Resolved:"
-  echo "    FINAL_VER_NAME='${FINAL_VER_NAME}' FINAL_VER_CODE='${FINAL_VER_CODE}'"
-} >&2
+            WCP_VERSION_PREFIX WCP_VERSION_SUFFIX 2>/dev/null >&2 || true
+  dbg "Version inputs: VERSION_NAME='${VERSION_NAME}'"
+  dbg "Resolved: FINAL_VER_NAME='${FINAL_VER_NAME}' FINAL_VER_CODE='${FINAL_VER_CODE}'"
+fi
 
-# -----------------------------------------------------------------------------
-# 2. Helpers
-# -----------------------------------------------------------------------------
 pack_wcp_archive() {
   local src_dir="$1"
   local out_file="$2"
@@ -89,20 +92,18 @@ pack_wcp_archive() {
   
   echo "Packing WCP: $out_file"
   tar --zstd -C "$src_dir" \
-    --format=gnu --owner=0 --group=0 --sort=name \
+    --format=gnu --owner=0 --group=0 "${TAR_SORT_OPT[@]}" \
     -cf "$out_file" "${contents[@]}"
 }
 
 generate_file_list_json() {
   local dir="$1"
 
-  find "$dir" -maxdepth 1 -name "*.dll" -printf '%P\n' | \
+  # stable order for reproducible profile.json
+  find "$dir" -maxdepth 1 -type f -iname "*.dll" -printf '%P\n' | LC_ALL=C sort | \
     jq -R -s 'split("\n") | map(select(length > 0))'
 }
 
-# -----------------------------------------------------------------------------
-# 3. Mode: Single Binary
-# -----------------------------------------------------------------------------
 if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
   BIN_SRC="$WCP_SINGLE_BIN_SOURCE"
   [[ -f "$BIN_SRC" ]] || { echo "::error::WCP_SINGLE_BIN_SOURCE not found: $BIN_SRC"; exit 1; }
@@ -128,12 +129,10 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
   echo "====[WCP DEBUG] ENV snapshot (WCP_*/BIN_*/UNI_KIND/REL_TAG*):" >&2
   env | sort | grep -E '^(WCP_|UNI_KIND|REL_TAG|VER_|BIN_|PROFILE_SH)=' >&2 || true
 
-  # Prepare Dir
   rm -rf "$WCP_DIR"
   mkdir -p "$WCP_DIR"
 
-  # Copy & Strip
-  cp "$BIN_SRC" "$WCP_DIR/$BIN_NAME"
+  cp -- "$BIN_SRC" "$WCP_DIR/$BIN_NAME"
   chmod +x "$WCP_DIR/$BIN_NAME"
   chmod u+w "$WCP_DIR/$BIN_NAME" 2>/dev/null || true
 
@@ -159,18 +158,13 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
       files: [ { source: $SRC, target: $TGT } ]
     }' > "$WCP_DIR/profile.json"
 
-  echo "====[WCP DEBUG] Generated profile.json (single-bin):" >&2
-  cat "$WCP_DIR/profile.json" >&2
+  dbg "Generated profile.json (single-bin): $(wc -c < "$WCP_DIR/profile.json" 2>/dev/null || echo '?') bytes"
 
   pack_wcp_archive "$WCP_DIR" "$OUT_PATH" "profile.json" "$BIN_NAME"
   
   echo "::endgroup::"
   exit 0
 fi
-
-# ----------------------------------------------------------------------------- #
-# 4. Mode: Graphics (DLLs)
-# ----------------------------------------------------------------------------- #
 
 # Resolve layout from profile:
 # WCP_DIR_64: target dir for "64-bit" side (default: system32)
@@ -230,9 +224,11 @@ fi
 
 # Resolve real source paths (handle /bin subdirectory)
 REAL_SRC_64="$SRC_64"
-REAL_SRC_32="$SRC_32"
 [[ -d "$SRC_64/bin" ]] && REAL_SRC_64="$SRC_64/bin"
-[[ -d "$SRC_32/bin" ]] && REAL_SRC_32="$SRC_32/bin"
+if $USE_32; then
+  REAL_SRC_32="$SRC_32"
+  [[ -d "$SRC_32/bin" ]] && REAL_SRC_32="$SRC_32/bin"
+fi
 
 # Prepare Layout
 rm -rf "$WCP_DIR"
@@ -242,7 +238,7 @@ if $USE_32 && ! $MERGE_32_INTO_64; then
 fi
 
 # Copy Logic
-find "$REAL_SRC_64" -maxdepth 1 -name "*.dll" -exec cp -v {} "$WCP_DIR/$WCP_DIR_64/" \;
+find "$REAL_SRC_64" -maxdepth 1 -type f -iname "*.dll" -exec cp -v -- {} "$WCP_DIR/$WCP_DIR_64/" \;
 if $USE_32; then
   if $MERGE_32_INTO_64; then
     # FEX merge mode: drop 32-bit DLLs into the same dir as 64-bit
@@ -254,42 +250,32 @@ if $USE_32; then
         echo "::error::Merge mode conflict: $dest already exists (refusing to overwrite 64-bit DLL with 32-bit)" >&2
         exit 1
       fi
-      cp -v "$f" "$dest"
+      cp -v -- "$f" "$dest"
     done < <(find "$REAL_SRC_32" -maxdepth 1 -name "*.dll" -print0)
   else
-    find "$REAL_SRC_32" -maxdepth 1 -name "*.dll" -exec cp -v {} "$WCP_DIR/$WCP_DIR_32/" \;
+    find "$REAL_SRC_32" -maxdepth 1 -type f -iname "*.dll" -exec cp -v -- {} "$WCP_DIR/$WCP_DIR_32/" \;
   fi
 fi
 
+has_dlls() { find "$1" -maxdepth 1 -type f -iname '*.dll' -print -quit | grep -q .; }
+
 # Verification
-count_64=( "$WCP_DIR/$WCP_DIR_64"/*.dll )
-if [[ ${#count_64[@]} -eq 0 ]]; then
-  echo "::error::No DLLs found in 64-bit source: $REAL_SRC_64"
-  exit 1
-fi
+has_dlls "$WCP_DIR/$WCP_DIR_64" || die "No DLLs found in 64-bit source: $REAL_SRC_64"
 
 if $USE_32; then
   if $MERGE_32_INTO_64; then
     # In merge mode we still want to ensure 32-bit source isn't empty
-    count_32_src=( "$REAL_SRC_32"/*.dll )
-    if [[ ${#count_32_src[@]} -eq 0 ]]; then
-      echo "::error::No DLLs found in 32-bit source (merge mode): $REAL_SRC_32"
-      exit 1
-    fi
+    has_dlls "$REAL_SRC_32" || die "No DLLs found in 32-bit source (merge mode): $REAL_SRC_32"
   else
-    count_32=( "$WCP_DIR/$WCP_DIR_32"/*.dll )
-    if [[ ${#count_32[@]} -eq 0 ]]; then
-      echo "::error::No DLLs found in 32-bit source: $REAL_SRC_32"
-      exit 1
-    fi
+    has_dlls "$WCP_DIR/$WCP_DIR_32" || die "No DLLs found in 32-bit source: $REAL_SRC_32"
   fi
 fi
 
 # Strip Symbols
 echo "Stripping symbols..."
 if [[ "$HAVE_LLVM_STRIP" -eq 1 ]]; then
-  find "$WCP_DIR" -name '*.dll' -print0 | xargs -0 -r chmod u+w || true
-  find "$WCP_DIR" -name '*.dll' -print0 | xargs -0 -r llvm-strip --strip-all || true
+  find "$WCP_DIR" -iname '*.dll' -print0 | xargs -0 -r chmod u+w || true
+  find "$WCP_DIR" -iname '*.dll' -print0 | xargs -0 -r llvm-strip --strip-all || true
 else
   echo "Skipping DLL strip (llvm-strip not available)."
 fi
@@ -333,4 +319,5 @@ else
   pack_wcp_archive "$WCP_DIR" "$OUT_PATH" "profile.json" "$WCP_DIR_64"
 fi
 
-echo "::endgroup:: Purrrrrrrrr"
+echo "::endgroup::"
+echo "Purrrrrrrrr"
