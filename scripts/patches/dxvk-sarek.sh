@@ -1,55 +1,46 @@
-# TODO: Clean this up into a proper py later
-
 #!/usr/bin/env bash
+# TODO: Clean this up into a proper py later
 set -Eeuo pipefail
 
-SRC_DIR="${1:-.}"
-SRC_ABS="$(cd "$SRC_DIR" && pwd)"
-MOCK_DIR="${2:-$SRC_ABS/../mock_inc}"
+die()  { echo "::error::$*" >&2; exit 1; }
+warn() { echo "::warning::$*" >&2; }
+need_file() { [[ -f "$1" ]] || die "$2"; }
 
-mkdir -p "$MOCK_DIR"
-MOCK_DIR="$(cd "$MOCK_DIR" && pwd)"
+SRC_DIR="${1:-.}"
+SRC_ABS="$(cd -- "$SRC_DIR" && pwd)"
+MOCK_DIR="${2:-"$SRC_ABS/../mock_inc"}"
+
+mkdir -p -- "$MOCK_DIR"
+MOCK_DIR="$(cd -- "$MOCK_DIR" && pwd)"
 
 ROOT="$SRC_ABS"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REAL_SHIM_SRC="$SCRIPT_DIR/shims/sarek-sse-shim.h"
 
 PYTHON="${PYTHON:-python3}"
-if ! command -v "$PYTHON" >/dev/null 2>&1; then
-  echo "::error::python3 (or \$PYTHON) not found in PATH"
-  exit 1
-fi
+command -v "$PYTHON" >/dev/null 2>&1 || die "python3 (or \$PYTHON) not found in PATH"
 
-
-# Mode
 MODE="${DXVK_SAREK_MODE:-arm64ec}"
 TAGGING=1
-
 case "$MODE" in
-  arm64ec)
-    TAGGING=1
-    ;;
-  common)
-    TAGGING=0
-    ;;
-  *)
-    echo "::error::Unknown DXVK_SAREK_MODE='$MODE' (expected: arm64ec, common)" >&2
-    exit 1
-    ;;
+  arm64ec) TAGGING=1 ;;
+  common)  TAGGING=0 ;;
+  *) die "Unknown DXVK_SAREK_MODE='$MODE' (expected: arm64ec, common)" ;;
 esac
 
 echo "== Sarek ARM64EC patch start (Precision Mode) =="
 
-if [[ ! -f "$REAL_SHIM_SRC" ]]; then
-  echo "::error::NEON shim implementation not found at $REAL_SHIM_SRC"
-  exit 1
-fi
+need_file "$REAL_SHIM_SRC" "shim header not found at $REAL_SHIM_SRC"
 
 FINAL_HEADER="$MOCK_DIR/sarek_all_in_one.h"
 
-# ---------------------------------------------------------------------------
+py_patch() {
+  local file="$1"
+  shift
+  "$PYTHON" - "$file" "$@"
+}
+
 # 1) Shim Header Setup
-# ---------------------------------------------------------------------------
 cat > "$FINAL_HEADER" <<'EOF'
 #pragma once
 #ifndef __CRT__NO_INLINE
@@ -90,24 +81,21 @@ cat >> "$FINAL_HEADER" <<'EOF'
 EOF
 
 HEADERS=(
-  "x86intrin.h" "immintrin.h" "emmintrin.h"
-  "xmmintrin.h" "smmintrin.h" "tmmintrin.h"
-  "pmmintrin.h" "nmmintrin.h" "wmmintrin.h"
-  "ia32intrin.h" "hresetintrin.h" "uintrintrin.h" "usermsrintrin.h"
+  x86intrin.h immintrin.h emmintrin.h
+  xmmintrin.h smmintrin.h tmmintrin.h
+  pmmintrin.h nmmintrin.h wmmintrin.h
+  ia32intrin.h hresetintrin.h uintrintrin.h usermsrintrin.h
 )
 
 for hdr in "${HEADERS[@]}"; do
   printf '#include "sarek_all_in_one.h"\n' > "$MOCK_DIR/$hdr"
 done
 
-# ---------------------------------------------------------------------------
 # 2) util_bit.h: x86 GNU asm tzcnt -> portable builtin
-# ---------------------------------------------------------------------------
 BIT_HEADER="$ROOT/src/util/util_bit.h"
 if [[ -f "$BIT_HEADER" ]]; then
-  "$PYTHON" - "$BIT_HEADER" <<'PY'
+  py_patch "$BIT_HEADER" <<'PY'
 import sys, pathlib
-
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
@@ -117,7 +105,6 @@ if "inline uint32_t tzcnt(uint32_t n)" in text and "return n ? __builtin_ctz(n) 
 
 lines = text.splitlines(True)
 out = []
-
 inside_tzcnt = False
 patched = False
 i = 0
@@ -135,10 +122,8 @@ while i < len(lines):
         out.append("    #elif defined(__GNUC__) || defined(__clang__)\n")
         out.append("    return n ? __builtin_ctz(n) : 32;\n")
         i += 1
-
         while i < len(lines) and "#else" not in lines[i]:
             i += 1
-
         patched = True
         continue
 
@@ -161,23 +146,20 @@ path.write_text("".join(out), encoding="utf-8")
 print("[OK] util_bit.h: replaced GNU/Clang tzcnt asm with __builtin_ctz")
 PY
 else
-  echo "::warning::util_bit.h not found, skipping bitops patch"
+  warn "util_bit.h not found, skipping bitops patch"
 fi
 
-# ---------------------------------------------------------------------------
 # 3) d3d9_device.cpp: ARM64EC-safe FPU setup + control init
-# ---------------------------------------------------------------------------
 D3D9_FILE="$ROOT/src/d3d9/d3d9_device.cpp"
-if [[ -f "$D3D9_FILE" ]]; then
-  "$PYTHON" - "$D3D9_FILE" <<'PY'
-import sys, pathlib, re
+[[ -f "$D3D9_FILE" ]] || die "d3d9_device.cpp not found!"
 
+py_patch "$D3D9_FILE" <<'PY'
+import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
 changed = False
 
-# [1] FPU Assembly Guard Patch
 old_cond = '#elif (defined(__GNUC__) || defined(__MINGW32__)) && (defined(__i386__) || defined(__x86_64__) || defined(__ia64))'
 new_cond = old_cond + ' && !defined(__arm64ec__) && !defined(_M_ARM64EC)'
 
@@ -190,7 +172,6 @@ elif new_cond in text:
 else:
     print("::warning::d3d9_device.cpp: FPU asm #elif condition not found; layout may have changed")
 
-# [2] Uninitialized Variable Patch
 if re.search(r'uint16_t\s+control\s*=\s*0\s*;', text):
     print("[OK] d3d9_device.cpp: control already initialized")
 else:
@@ -206,19 +187,13 @@ else:
 if changed:
     path.write_text(text, encoding="utf-8")
 PY
-else
-  echo "::error::d3d9_device.cpp not found!"
-  exit 1
-fi
 
-# ---------------------------------------------------------------------------
 # 4) dxvk_pipecompiler.h: Fix struct/class mismatch
-# ---------------------------------------------------------------------------
 PIPE_FILE="$ROOT/src/dxvk/dxvk_pipecompiler.h"
-if [[ -f "$PIPE_FILE" ]]; then
-  "$PYTHON" - "$PIPE_FILE" <<'PY'
-import sys, pathlib, re
+[[ -f "$PIPE_FILE" ]] || die "dxvk_pipecompiler.h not found!"
 
+py_patch "$PIPE_FILE" <<'PY'
+import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
 
@@ -237,7 +212,9 @@ patterns = [
 changed_count = 0
 for pat, repl in patterns:
     new_text, n = re.subn(pat, repl, text)
-    if n: changed_count += n; text = new_text
+    if n:
+        changed_count += n
+        text = new_text
 
 if changed_count > 0:
     path.write_text(text, encoding="utf-8")
@@ -250,18 +227,12 @@ if has_class:
 
 print("[OK] dxvk_pipecompiler.h: clean")
 PY
-else
-  echo "::error::dxvk_pipecompiler.h not found!"
-  exit 1
-fi
 
-# ---------------------------------------------------------------------------
 # 5) meson.build & version.h.in (Tagging)
-# ---------------------------------------------------------------------------
 if [[ "$TAGGING" -eq 1 ]]; then
   MESON_FILE="$ROOT/meson.build"
   if [[ -f "$MESON_FILE" ]]; then
-    "$PYTHON" - "$MESON_FILE" <<'PY'
+    py_patch "$MESON_FILE" <<'PY'
 import sys, pathlib
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
@@ -274,7 +245,7 @@ PY
 
   VER_IN="$ROOT/version.h.in"
   if [[ -f "$VER_IN" ]]; then
-    "$PYTHON" - "$VER_IN" <<'PY'
+    py_patch "$VER_IN" <<'PY'
 import sys, pathlib, re
 path = pathlib.Path(sys.argv[1])
 text = path.read_text(encoding="utf-8", errors="ignore")
