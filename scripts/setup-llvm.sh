@@ -11,7 +11,6 @@ cd "$GITHUB_WORKSPACE"
 
 rm -rf src pkg_temp *_WCP out .venv
 
-# install llvm-mingw
 gh release download "$LLVM_MINGW_TAG" -R "$LLVM_MINGW_REPO" \
   -p '*ucrt-ubuntu-22.04-x86_64.tar.xz' -O llvm.tar.xz --clobber
 
