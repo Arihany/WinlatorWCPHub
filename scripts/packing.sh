@@ -17,9 +17,12 @@ need_cmd jq
 need_cmd tar
 need_cmd zstd
 
-tar --help 2>/dev/null | grep -q -- '--zstd' || die "tar does not support --zstd on this runner."
+TAR_HELP="$(tar --help 2>/dev/null || true)"
+tar --version 2>/dev/null | grep -qi 'gnu tar' || warn "tar is not GNU tar (options/metadata may behave differently)."
+
+grep -q -- '--zstd' <<<"$TAR_HELP" || die "tar does not support --zstd on this runner."
 TAR_SORT_OPT=()
-if tar --help 2>/dev/null | grep -q -- '--sort'; then
+if grep -q -- '--sort' <<<"$TAR_HELP"; then
   TAR_SORT_OPT=(--sort=name)
 else
   warn "tar does not support --sort=name (archive order might vary)."
@@ -41,6 +44,7 @@ WCP_DIR="${3:?WCP_DIR is required}"
 VERSION_NAME="${4:?versionName is required}"
 OUT_PATH="${5:?output_wcp_path is required}"
 PROFILE_SH="${PROFILE_SH:?PROFILE_SH env var is required}"
+[[ -r "$PROFILE_SH" ]] || die "PROFILE_SH not readable: $PROFILE_SH"
 
 # Load profile (must define WCP_TYPE / WCP_DESC at least)
 source "$PROFILE_SH"
@@ -92,7 +96,7 @@ pack_wcp_archive() {
   
   echo "Packing WCP: $out_file"
   tar --zstd -C "$src_dir" \
-    --format=gnu --owner=0 --group=0 "${TAR_SORT_OPT[@]}" \
+    --format=gnu --owner=0 --group=0 --numeric-owner "${TAR_SORT_OPT[@]}" \
     -cf "$out_file" "${contents[@]}"
 }
 
@@ -126,8 +130,10 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
   echo "Bin target : $BIN_TARGET"
   echo "WCP dir    : $WCP_DIR"
   echo "Ver        : $FINAL_VER_NAME ($FINAL_VER_CODE)"
-  echo "====[WCP DEBUG] ENV snapshot (WCP_*/BIN_*/UNI_KIND/REL_TAG*):" >&2
-  env | sort | grep -E '^(WCP_|UNI_KIND|REL_TAG|VER_|BIN_|PROFILE_SH)=' >&2 || true
+  if [[ "${WCP_DEBUG:-0}" == "1" ]]; then
+    dbg "ENV snapshot (WCP_*/BIN_*/UNI_KIND/REL_TAG*):"
+    env | sort | grep -E '^(WCP_|UNI_KIND|REL_TAG|VER_|BIN_|PROFILE_SH)=' >&2 || true
+  fi
 
   rm -rf "$WCP_DIR"
   mkdir -p "$WCP_DIR"
@@ -251,7 +257,7 @@ if $USE_32; then
         exit 1
       fi
       cp -v -- "$f" "$dest"
-    done < <(find "$REAL_SRC_32" -maxdepth 1 -name "*.dll" -print0)
+    done < <(find "$REAL_SRC_32" -maxdepth 1 -type f -iname "*.dll" -print0)
   else
     find "$REAL_SRC_32" -maxdepth 1 -type f -iname "*.dll" -exec cp -v -- {} "$WCP_DIR/$WCP_DIR_32/" \;
   fi
