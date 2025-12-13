@@ -61,16 +61,22 @@ declare -A ASSET_CACHE
 
 get_assets_cached() {
   local channel="$1"
+  local __outvar="${2:-}"
   local tag_var="REL_TAG_${channel^^}"
   local release_tag="${!tag_var:-}"
 
   if [[ -z "$release_tag" ]]; then
     ASSET_CACHE[$channel]=""
+    [[ -n "$__outvar" ]] && printf -v "$__outvar" '%s' "" || true
     return 0
   fi
 
   if [[ -v ASSET_CACHE[$channel] ]]; then
-    printf '%s\n' "${ASSET_CACHE[$channel]}"
+    if [[ -n "$__outvar" ]]; then
+      printf -v "$__outvar" '%s' "${ASSET_CACHE[$channel]}"
+    else
+      printf '%s\n' "${ASSET_CACHE[$channel]}"
+    fi
     return 0
   fi
 
@@ -89,7 +95,11 @@ get_assets_cached() {
   fi
 
   ASSET_CACHE[$channel]="$out"
-  printf '%s\n' "$out"
+  if [[ -n "$__outvar" ]]; then
+    printf -v "$__outvar" '%s' "$out"
+  else
+    printf '%s\n' "$out"
+  fi
 }
 
 fetch_github_tags() {
@@ -289,11 +299,8 @@ resolve_gplasync_strategy() {
   local prefix="$UNI_KIND"
   [[ "$prefix" != dxvk-gplasync* ]] && return 1
 
-  local assets
-  if ! assets="$(get_assets_cached "stable")"; then
-    echo "::error::Cannot resolve existing GPLAsync assets (asset cache failed)." >&2
-    return 1
-  fi
+  local assets=""
+  get_assets_cached "stable" assets
 
   local existing_pairs_file="$TMP_DIR/exist_gplasync.txt"
   : > "$existing_pairs_file"
@@ -327,18 +334,15 @@ resolve_gplasync_strategy() {
       echo "${BASH_REMATCH[1]} ${BASH_REMATCH[3]}" >> "$targets_file"
     done
   else
-    # Auto Mode (Max Rev per Base)
-    jq -Rrs '
-      split("\n") | map(select(length > 0))
-      $lines
-      | map(capture("^v(?<base>[0-9]+\\.[0-9]+(?:\\.[0-9]+)?)\\-(?<rev>[0-9]+)$")?)
-      | map(select(. != null))
-      | group_by(.base)
-      | map({ base: .[0].base, rev: (map(.rev | tonumber) | max) })
-      | .[] | "\(.base) \(.rev)"
-    ' "$tags_file" > "$targets_file"
-    
-    [[ ! -s "$targets_file" ]] && { echo "::error::No valid vX.Y-R tags found in GitLab" >&2; return 1; }
+    # Auto Mode: pick the single latest tag overall
+    latest_line="$(
+      grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' "$tags_file" \
+        | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
+        | sort -k1,1V -k2,2n \
+        | tail -n1
+    )"
+    [[ -n "$latest_line" ]] || { echo "::error::No valid vX.Y-R tags found in GitLab" >&2; return 1; }
+    printf '%s\n' "$latest_line" > "$targets_file"
   fi
 
   while read -r base rev; do
@@ -358,8 +362,8 @@ add_to_queue() {
   local channel="$1" raw_data="$2"
   IFS='|' read -r ref ver_name filename short <<< "$raw_data"
 
-  local assets
-  assets="$(get_assets_cached "$channel")"
+  local assets=""
+  get_assets_cached "$channel" assets
   local rel_tag
   [[ "$channel" == "stable" ]] && rel_tag="$REL_TAG_STABLE" || rel_tag="$REL_TAG_NIGHTLY"
 
