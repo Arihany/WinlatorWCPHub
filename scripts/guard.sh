@@ -1,21 +1,15 @@
+#!/usr/bin/env bash
 #  /\_/\
 # (=•ᆽ•=)づ︻╦╤─
-
+#
 # TODO: Move guard logic to py, integrate the pre-reg into the core strategy
-
-#!/usr/bin/env bash
 set -Eeuo pipefail
 
-# =============================================================================
-# 0. Configuration & Environment
-# =============================================================================
-
 # Required Inputs
-UNI_KIND="${UNI_KIND:?UNI_KIND is not set}"
-UPSTREAM_REPO="${UPSTREAM_REPO:?UPSTREAM_REPO is not set}"
-GITHUB_REPOSITORY="${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
-REL_TAG_STABLE="${REL_TAG_STABLE:?REL_TAG_STABLE is not set}"
-
+: "${UNI_KIND:?UNI_KIND is not set}"
+: "${UPSTREAM_REPO:?UPSTREAM_REPO is not set}"
+: "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
+: "${REL_TAG_STABLE:?REL_TAG_STABLE is not set}"
 # Optional / Defaults
 REL_TAG_NIGHTLY="${REL_TAG_NIGHTLY:-}"
 IN_CHANNEL="${IN_CHANNEL:-stable}"
@@ -23,23 +17,30 @@ IN_VERSION="${IN_VERSION:-}"
 IS_SCHEDULE="${IS_SCHEDULE:-false}"
 GITLAB_REPO="${GITLAB_REPO:-}"
 
-# Temp File Management
 TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+cleanup() { rm -rf "$TMP_DIR"; }
+trap cleanup EXIT
 
-
-# 0.5 Ensure required tools
 ensure_base_tools() {
-  command -v jq >/dev/null 2>&1 && command -v curl >/dev/null 2>&1 && return 0
+
+  if command -v jq >/dev/null 2>&1 &&
+     command -v curl >/dev/null 2>&1 &&
+     command -v gh >/dev/null 2>&1; then
+    return 0
+  fi
 
   if ! command -v apt-get >/dev/null 2>&1; then
-    echo "::error::Missing required tools (jq/curl) and no apt-get available." >&2
+    echo "::error::Missing required tools (need: jq curl gh) and no apt-get available." >&2
+    exit 1
+  fi
+
+  if ! command -v gh >/dev/null 2>&1; then
+    echo "::error::Missing required tool: gh (GitHub CLI). Install it on the runner." >&2
     exit 1
   fi
 
   echo "Installing required tools (jq/curl)..." >&2
 
-  # Helper to run with sudo if available
   run_as_root() {
     if command -v sudo >/dev/null 2>&1; then sudo "$@"; else "$@"; fi
   }
@@ -56,10 +57,6 @@ echo "IN_CHANNEL  : $IN_CHANNEL"
 echo "IS_SCHEDULE : $IS_SCHEDULE"
 echo "::endgroup::"
 
-# =============================================================================
-# 1. API Helpers (Network & Cache)
-# =============================================================================
-
 declare -A ASSET_CACHE
 
 get_assets_cached() {
@@ -67,26 +64,32 @@ get_assets_cached() {
   local tag_var="REL_TAG_${channel^^}"
   local release_tag="${!tag_var:-}"
 
-  [[ -z "$release_tag" ]] && { ASSET_CACHE[$channel]=""; return 0; }
-
-  if [[ ! -v ASSET_CACHE[$channel] ]]; then
-    local out err_file="$TMP_DIR/gh_assets_${channel}.err"
-    if ! out="$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" \
-              --json assets --jq '.assets[].name' 2> "$err_file")"; then
-      local err
-      err="$(<"$err_file" 2>/dev/null || true)"
-      if grep -qiE "release not found|could not resolve|404" <<< "$err"; then
-        echo "::notice::Release '$release_tag' not found (treating as empty)." >&2
-        out=""
-      else
-        echo "::warning::Failed to fetch assets for '$release_tag'." >&2
-        [[ -n "$err" ]] && echo "$err" >&2
-        out=""
-      fi
-    fi
-    ASSET_CACHE[$channel]="$out"
+  if [[ -z "$release_tag" ]]; then
+    ASSET_CACHE[$channel]=""
+    return 0
   fi
-  printf '%s\n' "${ASSET_CACHE[$channel]}"
+
+  if [[ -v ASSET_CACHE[$channel] ]]; then
+    printf '%s\n' "${ASSET_CACHE[$channel]}"
+    return 0
+  fi
+
+  local out err err_file
+  err_file="$TMP_DIR/gh_assets_${channel}.err"
+  if ! out="$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>"$err_file")"; then
+    err="$(<"$err_file" 2>/dev/null || true)"
+    if grep -qiE "release not found|could not resolve|404" <<<"$err"; then
+      echo "::notice::Release '$release_tag' not found (treating as empty)." >&2
+      out=""
+    else
+      echo "::warning::Failed to fetch assets for '$release_tag'." >&2
+      [[ -n "$err" ]] && echo "$err" >&2
+      out=""
+    fi
+  fi
+
+  ASSET_CACHE[$channel]="$out"
+  printf '%s\n' "$out"
 }
 
 fetch_github_tags() {
@@ -125,13 +128,13 @@ get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
     box64*|wowbox64)
-      echo "^v[0-9]+\." "^v"
+      printf '%s\t%s\n' '^v[0-9]+\.' '^v'
       ;;
     fexcore)
-      echo "^FEX-[0-9]+" "^FEX-"
+      printf '%s\t%s\n' '^FEX-[0-9]+' '^FEX-'
       ;;
     dxvk*|vkd3d*)
-      echo "^(v)?[0-9]" ""
+      printf '%s\t%s\n' '^(v)?[0-9]' ''
       ;;
     *)
       return 1
@@ -139,7 +142,6 @@ get_tag_regex_for_kind() {
   esac
 }
 
-# Latest stable tag resolver (per UNI_KIND)
 get_latest_stable() {
   local kind="${1:-$UNI_KIND}"
   local regex strip_pat all_tags
@@ -152,10 +154,6 @@ get_latest_stable() {
   all_tags="$(fetch_github_tags)"
   find_latest_tag "$all_tags" "$regex" "$strip_pat"
 }
-
-# =============================================================================
-# 2. GitLab Helpers (Specific for GPLAsync)
-# =============================================================================
 
 fetch_gitlab_tags_all() {
   [[ -z "$GITLAB_REPO" ]] && { echo "::error::GITLAB_REPO is not set"; exit 1; }
@@ -183,10 +181,6 @@ fetch_gitlab_tags_all() {
   done
 }
 
-# =============================================================================
-# 3. Strategy Implementations
-# =============================================================================
-
 find_latest_tag() {
   local raw_tags="$1" regex="$2" strip_pat="$3"
   local filtered
@@ -196,9 +190,9 @@ find_latest_tag() {
   if [[ -z "$strip_pat" ]]; then
     sort -V <<< "$filtered" | tail -n1
   else
-    echo "$filtered" | awk -v pat="$strip_pat" '{
+    awk -v pat="$strip_pat" '{
       key = $0; gsub(pat, "", key); print key " " $0
-    }' | sort -k1,1V | tail -n1 | awk '{print $2}'
+    }' <<<"$filtered" | sort -k1,1V | tail -n1 | awk '{print $2}'
   fi
 }
 
@@ -223,7 +217,6 @@ resolve_standard_strategy() {
       else
         ref="$(get_upstream_head_sha)"
         short="${ref:0:7}"
-        
         local latest latest_base dev_ver
         latest="$(find_latest_tag "$(fetch_github_tags)" '^v[0-9]+\.' '^v')"
         [[ -z "$latest" ]] && latest="v0.0.0"
@@ -272,7 +265,7 @@ resolve_standard_strategy() {
       if [[ "$ref" =~ ^v[0-9] ]]; then
         base="${ref#v}"
       else
-        base="$(sed -E 's/^[^0-9]+//' <<< "$ref")"
+        base="$(sed -E 's/^[^0-9]+//' <<<"$ref")"
       fi
       [[ -z "$base" ]] && base="$ref"
 
@@ -291,12 +284,11 @@ resolve_standard_strategy() {
   echo "${ref}|${ver_name}|${filename}|${short}"
 }
 
-# Strategy B: GitLab DXVK-GPLASYNC
+# DXVK-GPLASYNC
 resolve_gplasync_strategy() {
   local prefix="$UNI_KIND"
   [[ "$prefix" != dxvk-gplasync* ]] && return 1
 
-  # 1. Get cached assets once
   local assets
   if ! assets="$(get_assets_cached "stable")"; then
     echo "::error::Cannot resolve existing GPLAsync assets (asset cache failed)." >&2
@@ -306,7 +298,6 @@ resolve_gplasync_strategy() {
   local existing_pairs_file="$TMP_DIR/exist_gplasync.txt"
   : > "$existing_pairs_file"
 
-  # 2. Parse existing assets
   if [[ -n "$assets" ]]; then
     while IFS= read -r name; do
       if [[ "$name" =~ ^${prefix}-([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)\.wcp$ ]]; then
@@ -315,13 +306,11 @@ resolve_gplasync_strategy() {
     done <<< "$assets"
   fi
 
-  # 3. Fetch GitLab Tags
   fetch_gitlab_tags_all || return 1
   local tags_file="$TMP_DIR/gitlab_tags_raw.txt"
   local targets_file="$TMP_DIR/gplasync_targets.txt"
   : > "$targets_file"
 
-  # 4. Determine Targets
   if [[ -n "$IN_VERSION" ]]; then
     # Manual Mode
     IFS=',' read -ra reqs <<< "$IN_VERSION"
@@ -339,33 +328,28 @@ resolve_gplasync_strategy() {
     done
   else
     # Auto Mode (Max Rev per Base)
-    jq -rRn '
-      (input | split("\n") | map(select(length>0))) as $lines |
+    jq -Rrs '
+      split("\n") | map(select(length > 0))
       $lines
       | map(capture("^v(?<base>[0-9]+\\.[0-9]+(?:\\.[0-9]+)?)\\-(?<rev>[0-9]+)$")?)
       | map(select(. != null))
       | group_by(.base)
       | map({ base: .[0].base, rev: (map(.rev | tonumber) | max) })
       | .[] | "\(.base) \(.rev)"
-    ' < "$tags_file" > "$targets_file"
+    ' "$tags_file" > "$targets_file"
     
     [[ ! -s "$targets_file" ]] && { echo "::error::No valid vX.Y-R tags found in GitLab" >&2; return 1; }
   fi
 
-  # 5. Process & Enqueue
   while read -r base rev; do
     [[ -z "$base" ]] && continue
     if grep -Fq "${base} ${rev}" "$existing_pairs_file"; then
       echo "  -> Skipped (Already exists: ${base}-${rev})" >&2; continue
     fi
-    # Format: ref|ver_name|filename|short
+
     add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
   done < "$targets_file"
 }
-
-# =============================================================================
-# 4. Queue Management
-# =============================================================================
 
 QUEUE=""
 HAS_WORK=false
@@ -379,7 +363,6 @@ add_to_queue() {
   local rel_tag
   [[ "$channel" == "stable" ]] && rel_tag="$REL_TAG_STABLE" || rel_tag="$REL_TAG_NIGHTLY"
 
-  # Check Existence
   if [[ -n "$assets" ]]; then
     if grep -Fxq "$filename" <<< "$assets"; then
       echo "  -> Skipped (Asset Exists: $filename)" >&2; return
@@ -397,12 +380,8 @@ add_to_queue() {
   HAS_WORK=true
 }
 
-# =============================================================================
-# 5. Main Execution Flow
-# =============================================================================
-
 dispatch_logic() {
-  # A. Special Handling: GPLAsync
+  # gplasync
   if [[ "$UNI_KIND" == dxvk-gplasync* ]]; then
     echo "::group::Strategy: GPLAsync ($UNI_KIND)"
     resolve_gplasync_strategy
@@ -410,17 +389,16 @@ dispatch_logic() {
     return
   fi
 
-  # B. Standard Handling
+  # Standard
   local has_nightly=false
   if [[ -n "${REL_TAG_NIGHTLY:-}" ]]; then
     has_nightly=true
   fi
 
-  # Scenario 1: Auto / Schedule
+  # Auto / Schedule
   if [[ "$IS_SCHEDULE" == "true" || "$IN_CHANNEL" == "auto" ]]; then
     echo "::group::Strategy: Auto/Schedule ($UNI_KIND)"
     
-    # Stable check
     local latest; latest="$(get_latest_stable)"
     if [[ -n "$latest" ]]; then
        local res; res="$(resolve_standard_strategy "stable" "$latest")"
@@ -429,14 +407,14 @@ dispatch_logic() {
        echo "::warning::No stable tag found for $UNI_KIND"
     fi
 
-    # Nightly check
+    # Nightly
     if [[ "$has_nightly" == "true" ]]; then
        local res_n; res_n="$(resolve_standard_strategy "nightly" "")"
        [[ -n "$res_n" ]] && add_to_queue "nightly" "$res_n"
     fi
     echo "::endgroup::"
 
-  # Scenario 2: Manual
+  # Manual
   else
     echo "::group::Strategy: Manual ($IN_CHANNEL / $IN_VERSION)"
     if [[ "$IN_CHANNEL" == "stable" ]]; then
@@ -469,10 +447,8 @@ dispatch_logic() {
   fi
 }
 
-# Run
 dispatch_logic
 
-# Output
 if $HAS_WORK; then
   echo "missing=true" >> "$GITHUB_OUTPUT"
   printf 'list<<EOF\n%sEOF\n' "$QUEUE" >> "$GITHUB_OUTPUT"
