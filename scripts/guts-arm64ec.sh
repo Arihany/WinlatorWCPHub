@@ -8,7 +8,6 @@ ref="${1:?ref is required}"
 ver_name="${2:?ver_name is required}"
 filename="${3:?filename is required}"
 
-# 3. Build Process (Custom for ARM64EC)
 ../.venv/bin/meson --version || true
 
 PKG_ROOT="../pkg_temp/${UNI_KIND}-${ref}"
@@ -17,7 +16,6 @@ mkdir -p "${PKG_ROOT}"
 
 rm -rf build_x86 build_ec
 
-# 3-1. Build x86 (Standard 32-bit)
 echo "Compiling x86 (32-bit)..."
 meson setup build_x86 \
   --cross-file build-win32.txt \
@@ -25,10 +23,8 @@ meson setup build_x86 \
   --prefix "$PWD/${PKG_ROOT}/x32"
 ninja -C build_x86 install
 
-# 3-2. Build ARM64EC (Replaces x64)
 echo "Compiling ARM64EC..."
 
-# ARM64EC shim / cpp_args
 ARGS_FLAGS=""
 
 if [[ -n "${MOCK_DIR:-}" ]]; then
@@ -52,14 +48,12 @@ meson setup build_ec \
 
 ninja -C build_ec install
 
-# 4. Resolve source dirs
 WCP_DIR="../${REL_TAG_STABLE}_WCP"
 rm -rf "$WCP_DIR"
 
 SRC_EC="${PKG_ROOT}/arm64ec"
 SRC_32="${PKG_ROOT}/x32"
 
-# Prefer /bin subfolder if present
 if [[ -d "$SRC_EC/bin" ]]; then
   SRC_EC="$SRC_EC/bin"
 fi
@@ -68,7 +62,6 @@ if [[ -d "$SRC_32/bin" ]]; then
   SRC_32="$SRC_32/bin"
 fi
 
-# 5. Pack WCP
 PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
 bash ../scripts/packing.sh \
   "$SRC_EC" \
