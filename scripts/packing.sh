@@ -28,7 +28,6 @@ else
   warn "tar does not support --sort=name (archive order might vary)."
 fi
 
-# llvm-strip
 if have_cmd llvm-strip; then
   HAVE_LLVM_STRIP=1
   echo "llvm-strip found; symbols will be stripped during packing."
@@ -37,7 +36,7 @@ else
   warn "llvm-strip not found; skipping symbol stripping."
 fi
 
-# Arguments
+# Args
 SRC_64="${1:?SRC_64 (64-bit / ARM64EC dir) is required}"
 SRC_32="${2:?SRC_32 (32-bit dir) is required}"
 WCP_DIR="${3:?WCP_DIR is required}"
@@ -46,21 +45,17 @@ OUT_PATH="${5:?output_wcp_path is required}"
 PROFILE_SH="${PROFILE_SH:?PROFILE_SH env var is required}"
 [[ -r "$PROFILE_SH" ]] || die "PROFILE_SH not readable: $PROFILE_SH"
 
-# Load profile (must define WCP_TYPE / WCP_DESC at least)
 source "$PROFILE_SH"
 
 : "${WCP_TYPE:?WCP_TYPE not set in profile}"
 : "${WCP_DESC:?WCP_DESC not set in profile}"
 
-# Resolve Version Code (keep it numeric for jq --argjson)
-# -> Only profile decides; workflow envs
 if [[ -n "${WCP_VERSION_CODE:-}" ]]; then
   FINAL_VER_CODE="$WCP_VERSION_CODE"
 else
   FINAL_VER_CODE="${WCP_VERSION_CODE_DEFAULT:-0}"
 fi
 
-# Guard against non-numeric values leaking into --argjson
 if ! [[ "$FINAL_VER_CODE" =~ ^[0-9]+$ ]]; then
   echo "::warning::WCP FINAL_VER_CODE='$FINAL_VER_CODE' is not numeric, forcing 0." >&2
   FINAL_VER_CODE=0
@@ -90,7 +85,7 @@ pack_wcp_archive() {
   local src_dir="$1"
   local out_file="$2"
   shift 2
-  local contents=("$@") # Files/Dirs to include relative to src_dir
+  local contents=("$@")
 
   mkdir -p "$(dirname "$out_file")"
   
@@ -103,7 +98,6 @@ pack_wcp_archive() {
 generate_file_list_json() {
   local dir="$1"
 
-  # stable order for reproducible profile.json
   find "$dir" -maxdepth 1 -type f -iname "*.dll" -printf '%P\n' | LC_ALL=C sort | \
     jq -R -s 'split("\n") | map(select(length > 0))'
 }
@@ -148,7 +142,6 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
     echo "Skipping strip for $BIN_NAME (llvm-strip not available)."
   fi
 
-  # Generate Profile
   jq -n \
     --arg TYPE "$WCP_TYPE" \
     --arg VER  "$FINAL_VER_NAME" \
@@ -172,18 +165,9 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
   exit 0
 fi
 
-# Resolve layout from profile:
-# WCP_DIR_64: target dir for "64-bit" side (default: system32)
-# WCP_DIR_32:
-#     unset      - default "syswow64" (normal 32bit layout)
-#     empty ("") - FEX-style merge mode: copy 32bit DLLs into WCP_DIR_64
 WCP_DIR_64="${WCP_DIR_64:-system32}"
 
-# WCP_DIR_32:
-# - unset        -> "syswow64" (normal dual-layout)
-# - set to ""    -> merge 32-bit into 64-bit dir (FEX etc)
 if [[ -z "${WCP_DIR_32+x}" ]]; then
-  # not set at all
   WCP_DIR_32="syswow64"
 fi
 
@@ -192,7 +176,6 @@ if [[ -z "$WCP_DIR_64" ]]; then
   exit 1
 fi
 
-# JSON targets (mount points)
 if [[ -z "${WCP_MOUNT_64:-}" ]]; then
   WCP_MOUNT_64="\${system32}"
 fi
@@ -203,7 +186,7 @@ fi
 USE_32=true
 MERGE_32_INTO_64=false
 
-# Special case: "-" means "no 32-bit side"
+# "-" no 32-bit side
 if [[ "$SRC_32" == "-" ]]; then
   USE_32=false
 fi
@@ -222,13 +205,11 @@ if $MERGE_32_INTO_64; then
   echo "::warning::Merge mode enabled: ALL DLLs (64+32) will be packaged under '$WCP_DIR_64' and mapped to $WCP_MOUNT_64 (FEX-style layout)." >&2
 fi
 
-# Sanity Check
 [[ -d "$SRC_64" ]] || { echo "::error::SRC_64 dir not found: $SRC_64"; exit 1; }
 if $USE_32; then
   [[ -d "$SRC_32" ]] || { echo "::error::SRC_32 dir not found: $SRC_32"; exit 1; }
 fi
 
-# Resolve real source paths (handle /bin subdirectory)
 REAL_SRC_64="$SRC_64"
 [[ -d "$SRC_64/bin" ]] && REAL_SRC_64="$SRC_64/bin"
 if $USE_32; then
@@ -236,14 +217,13 @@ if $USE_32; then
   [[ -d "$SRC_32/bin" ]] && REAL_SRC_32="$SRC_32/bin"
 fi
 
-# Prepare Layout
 rm -rf "$WCP_DIR"
 mkdir -p "$WCP_DIR/$WCP_DIR_64"
 if $USE_32 && ! $MERGE_32_INTO_64; then
   mkdir -p "$WCP_DIR/$WCP_DIR_32"
 fi
 
-# Copy Logic
+# Copy
 find "$REAL_SRC_64" -maxdepth 1 -type f -iname "*.dll" -exec cp -v -- {} "$WCP_DIR/$WCP_DIR_64/" \;
 if $USE_32; then
   if $MERGE_32_INTO_64; then
@@ -265,19 +245,18 @@ fi
 
 has_dlls() { find "$1" -maxdepth 1 -type f -iname '*.dll' -print -quit | grep -q .; }
 
-# Verification
+# Verify
 has_dlls "$WCP_DIR/$WCP_DIR_64" || die "No DLLs found in 64-bit source: $REAL_SRC_64"
 
 if $USE_32; then
   if $MERGE_32_INTO_64; then
-    # In merge mode we still want to ensure 32-bit source isn't empty
     has_dlls "$REAL_SRC_32" || die "No DLLs found in 32-bit source (merge mode): $REAL_SRC_32"
   else
     has_dlls "$WCP_DIR/$WCP_DIR_32" || die "No DLLs found in 32-bit source: $REAL_SRC_32"
   fi
 fi
 
-# Strip Symbols
+# Strip
 echo "Stripping symbols..."
 if [[ "$HAVE_LLVM_STRIP" -eq 1 ]]; then
   find "$WCP_DIR" -iname '*.dll' -print0 | xargs -0 -r chmod u+w || true
@@ -286,7 +265,7 @@ else
   echo "Skipping DLL strip (llvm-strip not available)."
 fi
 
-# Generate Profile
+# Profile
 echo "Generating profile.json..."
 
 x64_json="$(generate_file_list_json "$WCP_DIR/$WCP_DIR_64")"
