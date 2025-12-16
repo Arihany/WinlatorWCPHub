@@ -154,9 +154,10 @@
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers) | Qualcomm driver for Elite `a8xx`, Mesa turnip driver for `a6xx` `a7xx` |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm driver for Elite `a8xx`, Mesa turnip driver for `a6xx` `a7xx` |
-| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver) | Qualcomm driver for Elite `a8xx` |
+| [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Mesa Turnip driver (patched) |
+| [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases) | Qualcomm proprietary driver + Mesa Turnip driver |
+| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm proprietary driver + Mesa Turnip driver |
+| [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver/releases) | Qualcomm proprietary driver (ELITE) |
 
 
 <details>
