@@ -12,4 +12,4 @@ WCP_VERSION_CODE=0
 WCP_VERSION_PREFIX="gplasync-"
 #WCP_VERSION_SUFFIX=""
 
-WCP_DESC="Built on the Winlator WCP Hub (Upstream: Philip Rebohle, Patch:Ph42oN)"
+WCP_DESC="Built on the Winlator WCP Hub (Upstream: Philip Rebohle, Patch: Ph42oN)"
