@@ -10,7 +10,7 @@ echo ">> Pre-regression override enabled" >&2
 ref_full="4c0cbbef6abe2b1a9e8c358be0caf207c907a5d2"
 ref_short="4c0cbbe"
 
-base_ver="v2.4.1"
+base_ver="2.4.1"
 variant="pre-reg"
 
 ver_name="${variant}-${base_ver}"
