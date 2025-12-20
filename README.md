@@ -22,15 +22,9 @@
 > <details>
 >  <summary><b>What exactly is Winlator-Bionic?</b></summary><br>
 >
-> ### Winlator is an Android app created by [brunodev85](https://github.com/brunodev85). 
->  
-> It runs Windows software inside a glibc-based environment built around Wine and Box64. It follows a conservative, tightly integrated design that favors stability, predictable performance, and good behavior on low-end devices over aggressive experimentation.
->
-> ---
->
 > ### Winlator-Bionic is a community fork based on [Pipetto-crypto](https://github.com/Pipetto-crypto)’s project.
 >
-> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/Arm64EC containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`. The project actively experiments with new features and configurations.
+> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/Arm64EC containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`.
 > 
 > --- 
 >
@@ -39,7 +33,7 @@
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. Great performance. |
 > | [**GameNative**](https://github.com/utkarshdalal/GameNative/releases) | Supports both glibc and bionic, featuring a sleek UI and Steam integration. |
-> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | ⚠️ **Discontinued**. |
+> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | **Discontinued.** |
 > 
 > - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
@@ -68,8 +62,8 @@
 
 | Type | 📝 |
 |:-:|-|
-| **FEXCore** | Prioritizes accuracy. On reasonably modern setups it can give you very good compatibility without too much fuss, and pairing it with Arm64EC hides a lot of the overhead. It’s best to use the latest Bionic build. |
-| **Box64** | More friendly to weaker devices and aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
+| **FEXCore** | Prioritizes accuracy. On modern setups it can give you very good compatibility without too much fuss. |
+| **Box64** | Aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
 | **WowBox64** | Helps 32-bit Windows games run inside 64-bit Wine by bridging their old 32-bit calls to the 64-bit host. |
 
 - If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN` `BOX64_FASTROUND` `BOX64_X87DOUBLE` `FEX_X87REDUCEDPRECISION`
@@ -110,10 +104,12 @@
 | **SAFEFLAGS** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
 | **STRONGMEM** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
 | **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
-| **BIGBLOCK** | `2` | Official recommendation is `0`, but `2` often works fine in practice. |
-| **FORWARD** | `128` | You can try `256`. Higher values mainly increase the risk of subtle, unpredictable side effects. |
+| **BIGBLOCK** | `0-2` | Official recommendation is `0`, but `2` often works fine in practice. |
+| **FORWARD** | `128-256` | Higher values mainly increase the risk of subtle, unpredictable side effects. |
 | **CALLRET** | `0` | Keep as is. |
 | **WAIT** | `1` | `0` might help performance in heavily multithreaded or JIT-heavy workloads. |
+
+- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN` `BOX64_FASTROUND` `BOX64_X87DOUBLE` `FEX_X87REDUCEDPRECISION`
 
 </details>
 
@@ -128,6 +124,8 @@
 | [**`DXVK-Sarek-async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) | <!--sarek--> `1.11.0`| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
 | [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> `3.0b`|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
+- DXVK `2.5.x` and later may show reduced performance when used with the `Turnip driver`.
+
 <details>
   <summary>💡Quick Info</summary>
 <br> 
@@ -137,8 +135,6 @@
 | **Sarek**    | A modernized fork of DXVK `1.10.x` with backported fixes to keep older GPUs with weaker Vulkan support more stable. If you’re still on `1.10.x`, this is a good one to try. |
 | **gplasync** | `gpl` cache + `async` shader compilation to smooth out shader hitches and visible stutter. |
 | **Arm64EC**  | Designed to be paired with `FEXCore` to cut down translation work and keep overhead lower. |
-
-- DXVK v2.5 and later may show reduced performance when used with the Turnip driver.
   
 </details>
 
@@ -154,7 +150,7 @@
 ### 🔥 Adreno Driver
 | Link | 📝 |
 |:-:|-|
-| [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Mesa Turnip driver (patched) |
+| [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Mesa Turnip driver |
 | [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases) | Qualcomm proprietary driver + Mesa Turnip driver |
 | [**GameNative**](https://gamenative.app/drivers/) | Qualcomm proprietary driver + Mesa Turnip driver |
 | [**zoerakk**](https://github.com/zoerakk/qualcomm-adreno-driver/releases) | Qualcomm proprietary driver (ELITE) |
