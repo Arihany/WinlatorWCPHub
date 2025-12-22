@@ -143,7 +143,7 @@
 <p align="center">
   <img src="./img2.png" width="100">
 </p>
-<h3 align="center">Additional Packages and Helpful Links</h3>
+<h3 align="center">Additional Packages</h3>
 
 ---
 
