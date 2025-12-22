@@ -110,17 +110,22 @@ jobs:
               continue
             fi
 
-            RAW_BASE="${ver_name%-*}"
-            GPL_REV="${ver_name##*-}"
-            
-            DXVK_BASE="$RAW_BASE"
-            if [[ "$DXVK_BASE" == pre-reg-* ]]; then
-              DXVK_BASE="${DXVK_BASE#pre-reg-}"
+            DXVK_BASE=""
+            GPL_REV=""
+            VARIANT=""
+
+            if [[ "$ver_name" =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)(-(.+))?$ ]]; then
+              DXVK_BASE="${BASH_REMATCH[1]}"
+              GPL_REV="${BASH_REMATCH[3]}"
+              VARIANT="${BASH_REMATCH[5]:-}"
+            else
+              echo "::error::Unparseable ver_name: '$ver_name'" >&2
+              exit 1
             fi
             
             GPL_TAG="${ref}"
             
-            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" ]]; then
+            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
               DXVK_REF="$ref"
             else
               DXVK_REF="v${DXVK_BASE}"
@@ -131,14 +136,12 @@ jobs:
             {
               echo "::group::Building ${GPL_TAG} (dxvk ${DXVK_REF}, rev ${GPL_REV})"
 
-              # 1. Clean & Checkout
               git reset --hard
               git clean -fdx
               git checkout -f "$DXVK_REF"
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
               if [[ "${FORCE_PRE_REG:-false}" == "true" ]]; then
@@ -167,11 +170,9 @@ jobs:
               fi
 
               sed -i "s/--dirty=-[^']*gplasync'/--dirty=-gplasync'/g" "$PATCH_LOCAL" || true
-              sed -i 's/--dirty=-[^"]*gplasync"/--dirty=-gplasync"/g' "$PATCH_LOCAL" || true
 
               patch -p1 < "${PATCH_LOCAL}"
 
-              # 3. Build (Upstream)
               ../.venv/bin/meson --version || true
 
               PKG_ROOT="../pkg_temp"
@@ -182,7 +183,6 @@ jobs:
 
               ./package-release.sh "${PKG_VERSION}" "$PKG_ROOT" --no-package
 
-              # 4. Resolve Source Directories - fixed path
               SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}" 
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
@@ -190,17 +190,14 @@ jobs:
               SRC_64="$SRC_ROOT/x64"
               SRC_32="$SRC_ROOT/x32"
 
-              # Handle /bin subfolder if present
               [[ -d "$SRC_ROOT/x64/bin" ]] && SRC_64="$SRC_ROOT/x64/bin"
 
-              # Handle x32 vs x86 variation
               if [[ -d "$SRC_ROOT/x32/bin" ]]; then
                 SRC_32="$SRC_ROOT/x32/bin"
               elif [[ -d "$SRC_ROOT/x86" ]]; then
                 SRC_32="$SRC_ROOT/x86"
               fi
 
-              # 5. Pack WCP
               PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
               bash ../scripts/packing.sh \
                 "$SRC_64" \
@@ -233,11 +230,15 @@ jobs:
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
-            - **General-purpose x64/x86 build**
-            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
+            - General-purpose x64/x86 build
+            - pre-reg: Last version before the performance drop on Turnip driver
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write

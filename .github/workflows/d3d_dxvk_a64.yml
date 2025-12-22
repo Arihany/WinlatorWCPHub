@@ -111,14 +111,12 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout
               git reset --hard
               git clean -fdx
               git checkout -f "$ref"
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
               git config --global --add safe.directory "$(pwd)"
@@ -127,12 +125,11 @@ jobs:
                 git commit -m "Apply CI patches for $ref"
               fi
 
-              NEW_TAG="${ref}-Arm64EC"
+              NEW_TAG="${ref}-arm64ec"
               echo "Modifying tag: $ref -> $NEW_TAG"
               git tag -d "$ref" 2>/dev/null || true
               git tag -a -f "$NEW_TAG" -m "ARM64EC-Build"
 
-              # 3. Build & Prepare for Packing
               bash ../scripts/guts-arm64ec.sh \
                 "$ref" \
                 "$ver_name" \
@@ -161,12 +158,16 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: Arm64EC (system32) + x86 (syswow64)
-            - **Exclusive to FEX**
-            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
+            - Architecture: arm64ec (system32) + x86 (syswow64)
+            - For FEX only
+            - pre-reg: Last version before the performance drop on Turnip driver
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write

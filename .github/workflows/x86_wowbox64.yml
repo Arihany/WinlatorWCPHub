@@ -110,18 +110,14 @@ jobs:
           fetch-depth: 1
 
       - name: Build
-        env:
-          PROFILE_SH: ./scripts/profiles/${{ env.UNI_KIND }}.sh
         run: |
           mkdir -p _logs artifacts
 
           {
             echo "::group::Building ${REF} (${VER_NAME})"
 
-            # 1. Clean
             rm -rf build pkg
 
-            # 2. Configure
             cmake -S src -B build -G Ninja \
               -DCMAKE_C_COMPILER=aarch64-linux-gnu-gcc \
               -DCMAKE_ASM_COMPILER=aarch64-linux-gnu-gcc \
@@ -135,14 +131,11 @@ jobs:
               -DCI=0 \
               -DSTATICBUILD=0
 
-            # 3. Build
             cmake --build build --target wowbox64 --parallel "$(nproc)"
 
-            # 4. Find DLL
             DLL="$(find build -name 'wowbox64.dll' -type f | head -n1)"
             [[ -f "$DLL" ]] || { echo "::error::wowbox64.dll not found"; exit 1; }
 
-            # 5. Verification
             llvm-readobj -h "$DLL" | grep -qE 'Machine:.*(ARM64|AARCH64)' || {
               echo "::error::Unexpected MACHINE for wowbox64.dll"
               llvm-readobj -h "$DLL" || true
@@ -151,9 +144,8 @@ jobs:
 
             mkdir -p pkg
 
-            # 6. Pack WCP
             WCP_SINGLE_BIN_SOURCE="$DLL" \
-            PROFILE_SH="$PROFILE_SH" \
+            PROFILE_SH="./scripts/profiles/${UNI_KIND}.sh" \
             bash ./scripts/packing.sh \
               "-" \
               "-" \
@@ -183,7 +175,11 @@ jobs:
             - Architecture: ARM64 host (Linux ELF / Wine) + 32-bit x86 guest thunk
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write

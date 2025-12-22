@@ -105,13 +105,16 @@ jobs:
         with:
           repository: ${{ env.UPSTREAM_REPO }}
           ref:        ${{ env.REF }}
-          submodules: recursive
           path: src
           fetch-depth: 1
 
+      - name: Sync & update submodules
+        working-directory: src
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive --depth 1
+
       - name: Build
-        env:
-          PROFILE_SH: ./scripts/profiles/${{ env.UNI_KIND }}.sh
         run: |
           mkdir -p _logs artifacts
           LOG_PATH="_logs/${UNI_KIND}-${VER_NAME}-build.log"
@@ -119,7 +122,6 @@ jobs:
           {
             echo "::group::Building ${REF} (${VER_NAME})"
 
-            # 1. Clean & Helper
             rm -rf build pkg stage-ec stage-wo stage-wcp
             mkdir -p pkg
 
@@ -134,18 +136,13 @@ jobs:
               mkdir "$build_dir"
               cd "$build_dir"
 
-              # 2. Configure
               cmake -GNinja -Wno-dev \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_TOOLCHAIN_FILE=../Data/CMake/toolchain_mingw.cmake \
                 -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-windows \
                 -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
                 -DENABLE_LTO=False \
-                -DMINGW_BUILD=1 \
-                -DCMAKE_DISABLE_FIND_PACKAGE_fmt=true \
-                -DCMAKE_DISABLE_FIND_PACKAGE_range-v3=true \
-                -DCMAKE_C_COMPILER_WORKS=1 \
-                -DCMAKE_CXX_COMPILER_WORKS=1 \
+                -DENABLE_ASSERTIONS=False \
                 -DMINGW_TRIPLE="${triple}-w64-mingw32" \
                 -DBUILD_TESTING=False \
                 -DCMAKE_INSTALL_PREFIX=/usr ..
@@ -155,7 +152,6 @@ jobs:
               cd ..
             }
 
-            # 3. Build ARM64EC & AArch64
             build_arch "arm64ec" "../../stage-ec"
             build_arch "aarch64" "../../stage-wo"
 
@@ -167,7 +163,6 @@ jobs:
             rm -rf "$STAGE_MERGE"
             mkdir -p "$STAGE_MERGE"
 
-            # 4. Merge DLLs from both stages (search whole DESTDIR)
             for st in stage-ec stage-wo; do
               if [[ -d "$st" ]]; then
                 echo "Collecting DLLs from $st"
@@ -180,7 +175,6 @@ jobs:
               exit 1
             fi
 
-            # 5. Find DLL
             sample_dll="$(find "$STAGE_MERGE" -maxdepth 1 -type f -name '*.dll' | head -n1)"
             if [[ -n "$sample_dll" && "$(command -v llvm-readobj || true)" ]]; then
               if ! llvm-readobj -h "$sample_dll" | grep -qE 'Machine:.*(ARM64|AARCH64)'; then
@@ -189,8 +183,7 @@ jobs:
               fi
             fi
 
-            # 6. Pack WCP
-            PROFILE_SH="$PROFILE_SH" \
+            PROFILE_SH="./scripts/profiles/${UNI_KIND}.sh" \
             bash ./scripts/packing.sh \
               "$STAGE_MERGE" \
               "-" \
@@ -216,13 +209,16 @@ jobs:
         env:
           REPO:           ${{ github.repository }}
           ARTIFACT_GLOB:  "artifacts/${{ env.FILENAME }}"
-          VERSION_PREFIX: "FEXCore-" # Hardcoded on purpose due to an earlier tag naming mistake
+          VERSION_PREFIX: "FEXCore-" ###
           BODY: |
             - Architecture: ARM64 host (Wine / MinGW) + 64-bit x86 guest
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
-
+    permissions:
+      contents: write

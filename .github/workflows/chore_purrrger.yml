@@ -1,6 +1,5 @@
 #  /\_/\
 # (=•ᆽ•=)づ✂
-
 name: chore-purrrger
 
 on:
@@ -10,7 +9,7 @@ on:
     inputs:
       keep:
         type: number
-        default: 10
+        default: 5
         description: "cutcutcut"
 
 concurrency:
@@ -32,7 +31,7 @@ jobs:
       - name: Prune nightly release assets
         env:
           GITHUB_REPOSITORY: ${{ github.repository }}
-          KEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.keep || 10 }}
+          KEEP: ${{ github.event_name == 'workflow_dispatch' && inputs.keep || 5 }}
         run: |
           set -Eeuo pipefail
 
@@ -94,3 +93,12 @@ jobs:
 
             echo "::endgroup::"
           done <<< "$nightly_tags"
+          
+  maintenance:
+    name: Refresh pack.json + README
+    needs: prune-nightly
+    if: ${{ needs.prune-nightly.result == 'success' }}
+    uses: ./.github/workflows/chore_purrrser.yml
+    secrets: inherit
+    permissions:
+      contents: write

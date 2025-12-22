@@ -111,14 +111,12 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout
               git reset --hard
               git clean -fdx
               git checkout -f "$ref"
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply Patch & Clean Git Status
               bash ../scripts/patches/dxvk.sh .
 
               git config --global --add safe.directory "$(pwd)"
@@ -130,7 +128,6 @@ jobs:
               git tag -d "$ref" 2>/dev/null || true
               git tag -a -f "$ref" -m "Clean Build"
 
-              # 3. Build (Upstream)
               ../.venv/bin/meson --version || true
 
               PKG_ROOT="../pkg_temp"
@@ -139,7 +136,6 @@ jobs:
 
               ./package-release.sh "$ref" "$PKG_ROOT" --no-package
 
-              # 4. Resolve Source Directories
               SRC_ROOT="${PKG_ROOT}/${UNI_KIND}-${ref}"
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
@@ -147,17 +143,14 @@ jobs:
               SRC_64="$SRC_ROOT/x64"
               SRC_32="$SRC_ROOT/x32"
 
-              # Handle /bin subfolder if present
               [[ -d "$SRC_ROOT/x64/bin" ]] && SRC_64="$SRC_ROOT/x64/bin"
 
-              # Handle x32 vs x86 variation
               if [[ -d "$SRC_ROOT/x32/bin" ]]; then
                 SRC_32="$SRC_ROOT/x32/bin"
               elif [[ -d "$SRC_ROOT/x86" ]]; then
                 SRC_32="$SRC_ROOT/x86"
               fi
 
-              # 5. Pack WCP
               PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
               bash ../scripts/packing.sh \
                 "$SRC_64" \
@@ -190,12 +183,15 @@ jobs:
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
-            - **General-purpose x64/x86 build**
-            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
-
+            - General-purpose x64/x86 build
+            - pre-reg: Last version before the performance drop on Turnip driver
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write
