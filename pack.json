@@ -1,272 +1,332 @@
 [
   {
     "type": "Box64",
-    "verName": "0.3.4",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/BOX64-BIONIC/box64-bionic-0.3.4.wcp"
-  },
-  {
-    "type": "Box64",
-    "verName": "0.3.6",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/BOX64-BIONIC/box64-bionic-0.3.6.wcp"
-  },
-  {
-    "type": "Box64",
     "verName": "0.3.8",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/BOX64-BIONIC/box64-bionic-0.3.8.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC/box64-bionic-0.3.8.wcp"
   },
   {
     "type": "Box64",
-    "verName": "0.3.9-251222-e912aff",
+    "verName": "0.3.9-251217-67c2df0",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251222-e912aff.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251217-67c2df0.wcp"
+  },
+  {
+    "type": "Box64",
+    "verName": "0.3.9-251218-7f20c20",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251218-7f20c20.wcp"
+  },
+  {
+    "type": "Box64",
+    "verName": "0.3.9-251219-b34b7ac",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251219-b34b7ac.wcp"
+  },
+  {
+    "type": "Box64",
+    "verName": "0.3.9-251220-2babe3a",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251220-2babe3a.wcp"
+  },
+  {
+    "type": "Box64",
+    "verName": "0.3.9-251221-f93af92",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251221-f93af92.wcp"
   },
   {
     "type": "DXVK",
     "verName": "1.10.3",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-1.10.3.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-1.10.3.wcp"
+  },
+  {
+    "type": "DXVK",
+    "verName": "1.11.0-sarek",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK/dxvk-sarek-1.11.0.wcp"
   },
   {
     "type": "DXVK",
     "verName": "1.11.0-sarek-async",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-async-1.11.0.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-async-1.11.0.wcp"
+  },
+  {
+    "type": "DXVK",
+    "verName": "1.11.0-sarek-async-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC-ARM64EC/dxvk-sarek-async-arm64ec-1.11.0.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.3.1",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.3.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.3.1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.3.1-1-gplasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.3.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.3.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.3.1-1-gplasync-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.3.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.3.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.3.1-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.3.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.3.1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.4.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.4.1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-1-gplasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.4.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.4.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-1-gplasync-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.4.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.4.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-1-gplasync-arm64ec-pre-reg",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.4.1-1-pre-reg.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.4.1-1-pre-reg.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-1-gplasync-pre-reg",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.4.1-1-pre-reg.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.4.1-1-pre-reg.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.4.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.4.1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-arm64ec-pre-reg",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.4.1-pre-reg.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.4.1-pre-reg.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.4.1-pre-reg",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.4.1-pre-reg.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.4.1-pre-reg.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.5.3",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.5.3.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.5.3.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.5.3-1-gplasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.5.3-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.5.3-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.5.3-1-gplasync-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.5.3-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.5.3-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.5.3-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.5.3.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.5.3.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.6.2",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.6.2.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.6.2.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.6.2-1-gplasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.6.2-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.6.2-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.6.2-1-gplasync-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.6.2-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.6.2-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.6.2-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.6.2.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.6.2.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.7.1",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK/dxvk-2.7.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.7.1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.7.1-1-gplasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.7.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC/dxvk-gplasync-2.7.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.7.1-1-gplasync-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.7.1-1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-2.7.1-1.wcp"
   },
   {
     "type": "DXVK",
     "verName": "2.7.1-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.7.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.7.1.wcp"
   },
   {
     "type": "FEXCore",
     "verName": "2510",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/FEXCore/FEXCore-2510.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2510.wcp"
   },
   {
     "type": "FEXCore",
     "verName": "2511",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/FEXCore/FEXCore-2511.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2511.wcp"
   },
   {
     "type": "FEXCore",
     "verName": "2512",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/FEXCore/FEXCore-2512.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2512.wcp"
   },
   {
     "type": "FEXCore",
-    "verName": "2512-251222-d197300",
+    "verName": "2512-251210-53925dc",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/FEXCore-Nightly/FEXCore-2512-251222-d197300.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251210-53925dc.wcp"
   },
   {
-    "type": "VKD3D",
-    "verName": "2.12",
+    "type": "FEXCore",
+    "verName": "2512-251211-bf9ab7f",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON/vkd3d-proton-2.12.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251211-bf9ab7f.wcp"
   },
   {
-    "type": "VKD3D",
-    "verName": "2.12-arm64ec",
+    "type": "FEXCore",
+    "verName": "2512-251214-a957f1f",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-2.12.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251214-a957f1f.wcp"
   },
   {
-    "type": "VKD3D",
-    "verName": "2.13",
+    "type": "FEXCore",
+    "verName": "2512-251215-ec67670",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON/vkd3d-proton-2.13.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251215-ec67670.wcp"
   },
   {
-    "type": "VKD3D",
-    "verName": "2.13-arm64ec",
+    "type": "FEXCore",
+    "verName": "2512-251216-d197300",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-2.13.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251216-d197300.wcp"
   },
   {
     "type": "VKD3D",
     "verName": "2.14.1",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON/vkd3d-proton-2.14.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON/vkd3d-proton-2.14.1.wcp"
   },
   {
     "type": "VKD3D",
     "verName": "2.14.1-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-2.14.1.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-2.14.1.wcp"
   },
   {
     "type": "VKD3D",
     "verName": "3.0b",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON/vkd3d-proton-3.0b.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON/vkd3d-proton-3.0b.wcp"
   },
   {
     "type": "VKD3D",
     "verName": "3.0b-arm64ec",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-3.0b.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-3.0b.wcp"
   },
   {
     "type": "WOWBox64",
     "verName": "0.3.6",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/WOWBOX64/wowbox64-0.3.6.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64/wowbox64-0.3.6.wcp"
   },
   {
     "type": "WOWBox64",
     "verName": "0.3.8",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/WOWBOX64/wowbox64-0.3.8.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64/wowbox64-0.3.8.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251217-67c2df0",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251217-67c2df0.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251218-7f20c20",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251218-7f20c20.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251219-b34b7ac",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251219-b34b7ac.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251220-2babe3a",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251220-2babe3a.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251221-f93af92",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251221-f93af92.wcp"
+  },
+  {
+    "type": "Wine",
+    "verName": "10-proton-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WINE/wine-proton-10-arm64ec.wcp.xz"
   },
   {
     "type": "Wine",
     "verName": "9.20",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/TestLAB/releases/download/WINE/wine-9.20.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WINE/wine-9.20.wcp"
   }
 ]
