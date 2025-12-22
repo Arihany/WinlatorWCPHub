@@ -93,7 +93,7 @@
 
 | FEXCore | 🏷️ | 📝 |
 |:-:|:-:|-|
-| **TSO** | `1` | Keep as is. Set to `0` only for extreme performance experiments. |
+| **TSO** | `1` | Keep as is. |
 | **MEMCPYSETTSO** | `0` | If you still get crashes/freezes with `TSO = 1`, set this to `1`. | 
 | **VECTORTSO** | `0` | If you still get crashes/freezes with `TSO = 1` `MEMCPYSETTSO = 1`, set this to `1`. Very heavy. |
 | **HALFBARRIERTSO** | `1` | Keep as is. |
