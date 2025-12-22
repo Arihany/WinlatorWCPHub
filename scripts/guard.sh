@@ -1,16 +1,14 @@
-#!/usr/bin/env bash
 #  /\_/\
 # (=•ᆽ•=)づ︻╦╤─
-#
 # TODO: Move guard logic to py, integrate the pre-reg into the core strategy
 set -Eeuo pipefail
 
-# Required Inputs
+
 : "${UNI_KIND:?UNI_KIND is not set}"
 : "${UPSTREAM_REPO:?UPSTREAM_REPO is not set}"
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
 : "${REL_TAG_STABLE:?REL_TAG_STABLE is not set}"
-# Optional / Defaults
+
 REL_TAG_NIGHTLY="${REL_TAG_NIGHTLY:-}"
 IN_CHANNEL="${IN_CHANNEL:-stable}"
 IN_VERSION="${IN_VERSION:-}"
@@ -133,7 +131,7 @@ check_github_tag_exists() {
   exit 1
 }
 
-# Helper to centralize tag regex logic per kind
+# Helper
 get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
@@ -206,7 +204,7 @@ find_latest_tag() {
   fi
 }
 
-# Strategy A: Standard GitHub
+# Standard
 resolve_standard_strategy() {
   local channel="$1" input_arg="$2"
   local strategy="$UNI_KIND"
@@ -294,7 +292,7 @@ resolve_standard_strategy() {
   echo "${ref}|${ver_name}|${filename}|${short}"
 }
 
-# DXVK-GPLASYNC
+# gplasync
 resolve_gplasync_strategy() {
   local prefix="$UNI_KIND"
   [[ "$prefix" != dxvk-gplasync* ]] && return 1
@@ -319,7 +317,7 @@ resolve_gplasync_strategy() {
   : > "$targets_file"
 
   if [[ -n "$IN_VERSION" ]]; then
-    # Manual Mode
+    # Manual
     IFS=',' read -ra reqs <<< "$IN_VERSION"
     for raw in "${reqs[@]}"; do
       local tag; tag="$(echo "$raw" | xargs)"
@@ -334,7 +332,7 @@ resolve_gplasync_strategy() {
       echo "${BASH_REMATCH[1]} ${BASH_REMATCH[3]}" >> "$targets_file"
     done
   else
-    # Auto Mode: pick the single latest tag overall
+    # Auto: pick the single latest tag overall
     latest_line="$(
       grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' "$tags_file" \
         | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \

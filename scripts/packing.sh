@@ -1,7 +1,5 @@
-#!/usr/bin/env bash
 #  /\_/\
 # (=•ᆽ•=)づ📦
-
 set -Eeuo pipefail
 shopt -s nullglob
 

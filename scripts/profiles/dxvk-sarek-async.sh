@@ -9,7 +9,7 @@ WCP_MOUNT_32="\${syswow64}"
 WCP_TYPE="DXVK"
 WCP_VERSION_CODE=0
 #WCP_VERSION_CODE_DEFAULT=0
-WCP_VERSION_PREFIX="async-"
-#WCP_VERSION_SUFFIX=""
+#WCP_VERSION_PREFIX="async-"
+WCP_VERSION_SUFFIX="-async"
 
 WCP_DESC="Built on the Winlator WCP Hub (Upstream: pythonlover02)"

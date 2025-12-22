@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -Eeuo pipefail
 
 : "${UNI_KIND:?UNI_KIND is required}"

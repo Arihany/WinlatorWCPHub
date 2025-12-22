@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -Eeuo pipefail
 
 : "${UNI_KIND:?UNI_KIND is required}"
@@ -13,9 +12,9 @@ ref_short="4c0cbbe"
 base_ver="2.4.1"
 variant="pre-reg"
 
-ver_name="${variant}-${base_ver}"
+ver_name="${base_ver}-${variant}"
 rel_tag="${REL_TAG_STABLE}"
-filename="${UNI_KIND}-${variant}-${base_ver}.wcp"
+filename="${UNI_KIND}-${base_ver}-${variant}.wcp"
 
 {
   echo "missing=true"

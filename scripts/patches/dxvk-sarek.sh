@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 # TODO: Clean this up into a proper py later
 set -Eeuo pipefail
 
@@ -228,37 +227,6 @@ if has_class:
 print("[OK] dxvk_pipecompiler.h: clean")
 PY
 
-# 5) meson.build & version.h.in (Tagging)
-if [[ "$TAGGING" -eq 1 ]]; then
-  MESON_FILE="$ROOT/meson.build"
-  if [[ -f "$MESON_FILE" ]]; then
-    py_patch "$MESON_FILE" <<'PY'
-import sys, pathlib
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8", errors="ignore")
-if "--dirty=-async'" in text:
-    text = text.replace("--dirty=-async'", "--dirty=-async-Arm64EC'")
-    path.write_text(text, encoding="utf-8")
-    print("[OK] meson.build updated")
-PY
-  fi
-
-  VER_IN="$ROOT/version.h.in"
-  if [[ -f "$VER_IN" ]]; then
-    py_patch "$VER_IN" <<'PY'
-import sys, pathlib, re
-path = pathlib.Path(sys.argv[1])
-text = path.read_text(encoding="utf-8", errors="ignore")
-m = re.search(r'(#define\s+DXVK_VERSION\s+")([^"]*)(")', text)
-if m and 'arm64ec' not in m.group(2).lower():
-    new_body = m.group(2) + '-Arm64EC'
-    new_text = text[:m.start()] + f'{m.group(1)}{new_body}{m.group(3)}' + text[m.end():]
-    path.write_text(new_text, encoding="utf-8")
-    print(f"[OK] version.h.in -> {new_body}")
-PY
-  fi
-fi
-
 export MOCK_DIR
 export SHIM_FILE="$FINAL_HEADER"
-echo "== Sarek ARM64EC patch completed successfully =="
+echo "== Sarek patch completed successfully =="
