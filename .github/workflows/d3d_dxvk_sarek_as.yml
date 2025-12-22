@@ -76,7 +76,7 @@ jobs:
 
       - name: Clone Source
         run: |
-          git clone "https://github.com/$UPSTREAM_REPO.git" src
+          git clone --branch "$UPSTREAM_BRANCH" --single-branch --recurse-submodules "https://github.com/$UPSTREAM_REPO.git" src
           git -C src config user.name "Builder"
           git -C src config user.email "bot@noreply"
 
@@ -87,6 +87,7 @@ jobs:
           mkdir -p _logs out src/out
 
           cd src
+          git fetch origin "$UPSTREAM_BRANCH" --force
           git fetch --tags --force
 
           while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
@@ -102,19 +103,24 @@ jobs:
             {
               echo "::group::Building ${ref} (${ver_name})"
 
-              # 1. Clean & Checkout Async branch
-              git reset --hard
+              tag_sha="$(git rev-parse "$ref^{commit}")"
+              if ! git merge-base --is-ancestor "$tag_sha" "origin/$UPSTREAM_BRANCH"; then
+                echo "::error::Ref '$ref' ($tag_sha) is not contained in origin/$UPSTREAM_BRANCH" >&2
+                exit 1
+              fi
+              git checkout -f "$tag_sha"
+
+              # head_sha="$(git rev-parse "origin/$UPSTREAM_BRANCH")"
+              # git checkout -f "$head_sha"
+              
               git clean -fdx
-              git fetch origin "$UPSTREAM_BRANCH"
-              git checkout -B "$UPSTREAM_BRANCH" "origin/$UPSTREAM_BRANCH"
-              git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply patches
               bash ../scripts/patches/dxvk.sh .
               DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek.sh .
 
-              # 3. Build (Upstream)
+              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-async"'"/' version.h.in
+
               ../.venv/bin/meson --version || true
 
               PKG_ROOT="../pkg_temp"
@@ -123,7 +129,6 @@ jobs:
 
               ./package-release.sh "$ref" "$PKG_ROOT" --no-package
 
-              # 4. Resolve Source Directories - fixed path
               SRC_ROOT="${PKG_ROOT}/dxvk-async-${ref}"
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
@@ -131,17 +136,14 @@ jobs:
               SRC_64="$SRC_ROOT/x64"
               SRC_32="$SRC_ROOT/x32"
 
-              # Handle /bin subfolder if present
               [[ -d "$SRC_ROOT/x64/bin" ]] && SRC_64="$SRC_ROOT/x64/bin"
 
-              # Handle x32 vs x86 variation
               if [[ -d "$SRC_ROOT/x32/bin" ]]; then
                 SRC_32="$SRC_ROOT/x32/bin"
               elif [[ -d "$SRC_ROOT/x86" ]]; then
                 SRC_32="$SRC_ROOT/x86"
               fi
 
-              # 5. Pack WCP
               PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
               bash ../scripts/packing.sh \
                 "$SRC_64" \
@@ -174,11 +176,15 @@ jobs:
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
-            - **General-purpose x64/x86 build**
+            - General-purpose x64/x86 build
             - **Patched: Minor correctness & ABI cleanups**
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write

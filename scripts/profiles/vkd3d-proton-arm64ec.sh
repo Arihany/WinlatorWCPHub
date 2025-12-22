@@ -9,7 +9,7 @@ WCP_MOUNT_32="\${syswow64}"
 WCP_TYPE="VKD3D"
 WCP_VERSION_CODE=0
 #WCP_VERSION_CODE_DEFAULT=0
-WCP_VERSION_PREFIX="arm64ec-"
-#WCP_VERSION_SUFFIX=""
+#WCP_VERSION_PREFIX="arm64ec-"
+WCP_VERSION_SUFFIX="-arm64ec"
 
 WCP_DESC="Built on the Winlator WCP Hub (Upstream: Hans-Kristian Arntzen)"

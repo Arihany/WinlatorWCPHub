@@ -1,0 +1,88 @@
+name: tudev
+
+on:
+  workflow_dispatch:
+
+  schedule:
+    - cron: "0 6 * * 2,5"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: turnip-dev
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  turnip-dev:
+    name: GBR
+    runs-on: ubuntu-latest
+
+    env:
+      NDK_VERSION: android-ndk-r29
+      SDK_VERSION: "31"
+      TURNIP_RELEASE_TAG: TU-DEV
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -yq
+          sudo apt-get install -yq --no-install-recommends \
+            git curl unzip zip python3 python3-venv ninja-build \
+            patchelf gh glslang-tools bison flex
+
+      - name: Guard - resolve Mesa baseline from Mesa CI (a750-vk only)
+        id: guard
+        env:
+          GITLAB_TOKEN: ${{ secrets.GITLAB_TOKEN }}
+
+        run: |
+          python3 scripts/tu/guard.py
+
+      - name: Skip notice
+        if: steps.guard.outputs.FOUND != 'true'
+        run: echo "::notice::Baseline not found. Skipping build."
+
+      - name: Build Turnip dev + package artifact
+        id: build
+        if: steps.guard.outputs.FOUND == 'true'
+        env:
+          NDK_VERSION: ${{ env.NDK_VERSION }}
+          SDK_VERSION: ${{ env.SDK_VERSION }}
+          MESA_BASELINE_SHA: ${{ steps.guard.outputs.MESA_BASELINE_SHA }}
+          
+        run: |
+          bash scripts/tu/build.sh
+
+      - name: Publish to TU-DEV release (asset only)
+        if: steps.guard.outputs.FOUND == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ env.TURNIP_RELEASE_TAG }}
+          ARTIFACT_PATH: ${{ steps.build.outputs.ARTIFACT_PATH }}
+        run: |
+          set -Eeuo pipefail
+
+          [[ -n "${ARTIFACT_PATH}" ]] || { echo "::error::ARTIFACT_PATH is empty"; exit 1; }
+          [[ -f "${ARTIFACT_PATH}" ]] || { echo "::error::Missing artifact: ${ARTIFACT_PATH}"; exit 1; }
+
+          if ! gh release view "${TAG}" --repo "${REPO}" >/dev/null 2>&1; then
+            gh release create "${TAG}" \
+              --repo "${REPO}" \
+              -t "Turnip Dev" \
+              -n ""
+          fi
+
+          gh release upload "${TAG}" "${ARTIFACT_PATH}" \
+            --repo "${REPO}" \
+            --clobber

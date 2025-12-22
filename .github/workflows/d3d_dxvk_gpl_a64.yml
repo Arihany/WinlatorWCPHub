@@ -110,17 +110,22 @@ jobs:
               continue
             fi
 
-            RAW_BASE="${ver_name%-*}"
-            GPL_REV="${ver_name##*-}"
-            
-            DXVK_BASE="$RAW_BASE"
-            if [[ "$DXVK_BASE" == pre-reg-* ]]; then
-              DXVK_BASE="${DXVK_BASE#pre-reg-}"
+            DXVK_BASE=""
+            GPL_REV=""
+            VARIANT=""
+
+            if [[ "$ver_name" =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)(-(.+))?$ ]]; then
+              DXVK_BASE="${BASH_REMATCH[1]}"
+              GPL_REV="${BASH_REMATCH[3]}"
+              VARIANT="${BASH_REMATCH[5]:-}"
+            else
+              echo "::error::Unparseable ver_name: '$ver_name'" >&2
+              exit 1
             fi
             
             GPL_TAG="${ref}"
             
-            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" ]]; then
+            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
               DXVK_REF="$ref"
             else
               DXVK_REF="v${DXVK_BASE}"
@@ -131,14 +136,12 @@ jobs:
             {
               echo "::group::Building ${GPL_TAG} (dxvk ${DXVK_REF}, rev ${GPL_REV})"
 
-              # 1. Clean & Checkout
               git reset --hard
               git clean -fdx
               git checkout -f "$DXVK_REF"
               git submodule sync --recursive
               git submodule update --init --recursive
 
-              # 2. Apply general Patch & add hud
               bash ../scripts/patches/dxvk.sh .
 
               if [[ "${FORCE_PRE_REG:-false}" == "true" ]]; then
@@ -166,12 +169,10 @@ jobs:
                 fi
               fi
 
-              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-gplasync-Arm64EC'/g" "$PATCH_LOCAL" || true
-              sed -i 's/--dirty=-[^"]*gplasync"/--dirty=-gplasync-Arm64EC"/g' "$PATCH_LOCAL" || true
+              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-gplasync-arm64ec'/g" "$PATCH_LOCAL" || true
 
               patch -p1 < "${PATCH_LOCAL}"
 
-              # 3. Build & Prepare for Packing
               bash ../scripts/guts-arm64ec.sh \
                 "$ref" \
                 "$ver_name" \
@@ -200,12 +201,16 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: Arm64EC (system32) + x86 (syswow64)
-            - **Exclusive to FEX**
-            - pre-reg: Pre-regression build from the last commit before the timeline semaphore sync rework
+            - Architecture: arm64ec (system32) + x86 (syswow64)
+            - For FEX only
+            - pre-reg: Last version before the performance drop on Turnip driver
         run: bash ./scripts/release.sh
 
-  bump-readme:
+  maintenance:
+    name: Refresh pack.json + README
     needs: build
+    if: needs.build.result == 'success'
     uses: ./.github/workflows/chore_purrrser.yml
     secrets: inherit
+    permissions:
+      contents: write

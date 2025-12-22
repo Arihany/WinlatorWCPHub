@@ -24,7 +24,7 @@
 >
 > ### Winlator-Bionic is a community fork based on [Pipetto-crypto](https://github.com/Pipetto-crypto)’s project.
 >
-> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/Arm64EC containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`.
+> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/arm64ec containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`.
 > 
 > --- 
 >
@@ -33,17 +33,18 @@
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. Great performance. |
 > | [**GameNative**](https://github.com/utkarshdalal/GameNative/releases) | Supports both glibc and bionic, featuring a sleek UI and Steam integration. |
-> | [**Winlator-OSS**](https://github.com/Mart-01-oss/WinlatorOSS/releases) | **Discontinued.** |
 > 
 > - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
 > ---
 > 
 > </details>
-
-- If anything is broken or missing, please let me know!<br>
-- GameNative `v0.6.0` has a bug where wcp is not applied. It will be fixed in the next release.
-
+> <br>
+> 
+> Add this URL in Settings to easily download all assets:
+> ```
+> https://raw.githubusercontent.com/Arihany/WinlatorWCPHub/refs/heads/main/pack.json
+> ``` 
 
 ---
 
@@ -51,9 +52,9 @@
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
-| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> `2512`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
-| Box64-Bionic | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY) | <!--box64--> `0.3.8` `0.3.9`| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
-| WowBox64 | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64-NIGHTLY) | <!--box64--> `0.3.8` `0.3.9`| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
+| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> |<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
+| Box64-Bionic | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY) | <!--box64--> | <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
+| WOWBox64 | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64-NIGHTLY) | <!--box64--> | <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
 <!--| Box64-Glibc | [**Stable**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-STABLE) &nbsp; [**Nightly**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-NIGHTLY) | Paused ||-->
 
 <details>
@@ -119,10 +120,10 @@
 
 | 📦 | 🏷️ | 📜 |
 |-|:-:|:-:|
-| [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> `2.7.1`| <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
-| [**`DXVK-gplasync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> `2.7.1-1`| <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
-| [**`DXVK-Sarek-async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) | <!--sarek--> `1.11.0`| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
-| [**`VKD3D-Proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`Arm64EC`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> `3.0b`|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
+| [**`DXVK`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-ARM64EC) | <!--dxvk--> | <a href="https://github.com/doitsujin/dxvk/releases">🔗</a> |
+| [**`DXVK-gplasync`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-GPLASYNC-ARM64EC)| <!--gplasync--> | <a href="https://gitlab.com/Ph42oN/dxvk-gplasync/-/releases">🔗</a> |
+| [**`DXVK-sarek-async`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) | <!--sarek--> | <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
+| [**`VKD3D-proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> |<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
 - DXVK `2.5.x` and later may show reduced performance when used with the `Turnip driver`.
 
@@ -132,9 +133,9 @@
 
 | Type | 📝 |
 |:-:|-|
-| **Sarek**    | A modernized fork of DXVK `1.10.x` with backported fixes to keep older GPUs with weaker Vulkan support more stable. If you’re still on `1.10.x`, this is a good one to try. |
+| **sarek**    | A modernized fork of DXVK `1.10.x` with backported fixes to keep older GPUs with weaker Vulkan support more stable. If you’re still on `1.10.x`, this is a good one to try. |
 | **gplasync** | `gpl` cache + `async` shader compilation to smooth out shader hitches and visible stutter. |
-| **Arm64EC**  | Designed to be paired with `FEXCore` to cut down translation work and keep overhead lower. |
+| **arm64ec**  | Designed to be paired with `FEXCore` to cut down translation work and keep overhead lower. |
   
 </details>
 
@@ -189,11 +190,6 @@
 - If older VC++ is needed, try an [**AIO package**](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/). <br>
 
 </details>
-
----
-
-### 🌐 More Repos
-[**Winlator 101**](https://github.com/K11MCH1/Winlator101)
 
 ---
 <br>

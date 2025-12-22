@@ -1,170 +1,107 @@
-#  /\_/\
-# (=•ᆽ•=)づ🔍
-
+#  /\_/\ 
+# (=•ᆽ•=)づ🔧
 name: chore-purrrser
 
 on:
   workflow_dispatch:
   workflow_call:
+  release:
+    types: [published, edited]
+  repository_dispatch:
+    types: [regen_pack_json]
 
 permissions:
   contents: write
 
 concurrency:
-  group: purrrser-${{ github.ref }}
-  cancel-in-progress: false
+  group: maintenance-${{ github.repository }}-default-branch
+  cancel-in-progress: true
 
 defaults:
   run:
-    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+    shell: bash --noprofile --norc -Eeuo pipefail {0}
 
 jobs:
-  bump-readme:
-    name: Update README
+  update:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       REPO: ${{ github.repository }}
+      README_FILE: README.md
+      PACK_FILE: pack.json
+
     steps:
-      - name: Checkout
+      - name: Checkout default branch
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
 
-      - name: Sync to latest main
+      - name: branch
         run: |
-          git fetch origin main
-          git checkout main
-          git reset --hard origin/main
+          TARGET_BRANCH="${{ github.event.repository.default_branch }}"
+          [ -n "$TARGET_BRANCH" ] || TARGET_BRANCH="main"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
 
-      - name: Install tools
+          git fetch origin "$TARGET_BRANCH"
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          git reset --hard "origin/$TARGET_BRANCH"
+
+          echo "Using branch: $TARGET_BRANCH"
+          git --no-pager log -1 --oneline
+
+      - name: tools
         run: |
           sudo apt-get -yqq update
           sudo apt-get -yqq install --no-install-recommends jq perl
 
-      - name: Setup & Validate Map
-        id: setup
-        run: |
-          # 1. Define Mapping
-          cat > map.json <<'EOF'
-          {
-            "fex":      "FEXCore",
-            "dxvk":     "DXVK",
-            "sarek":    "DXVK-SAREK-ASYNC",
-            "gplasync": "DXVK-GPLASYNC",
-            "vkd3d":    "VKD3D-PROTON",
-            "box64":    "BOX64-BIONIC"
-          }
-          EOF
-
-          # 2. Validate README Placeholders
-          echo "::group::Validating Placeholders"
-          missing=0
-          while read -r key; do
-            count=$(grep -o "<!--${key}-->" README.md | wc -l | tr -d ' ')
-            if [ "$count" -eq 0 ]; then
-              echo "::error file=README.md::Placeholder <!--${key}--> not found"
-              missing=1
-            else
-              echo "✅ <!--${key}--> found (${count} occurrence(s))"
-            fi
-          done < <(jq -r 'keys[]' map.json)
-          [ "$missing" -eq 0 ] || exit 1
-          echo "::endgroup::"
-
-      - name: Resolve Versions
-        id: resolve
-        run: |
-          cp README.md README.before
-          cp README.md README.tmp
-          
-          # Regex to capture version after "- Current version:"
-          REGEX='^\s*-\s*Current\s+version:\s*([0-9]+(?:\.[0-9]+){0,2}[0-9A-Za-z]*(?:[-+][0-9A-Za-z().-]+)*)'
-
-          echo "::group::Fetching Release Info"
-          
-          while IFS=$'\t' read -r key tag; do
-            printf "%-10s : " "$key"
-
-            ver_raw=""
-            if body=$(gh release view "$tag" --repo "$REPO" --json body --jq '.body' 2>/dev/null); then
-              ver_raw=$(echo "$body" | perl -ne "print \$1 if /$REGEX/m")
-            fi
-
-            if [ -z "$ver_raw" ]; then
-              ver="⛔BRRR"
-              echo "⛔ failed to parse version, setting to $ver"
-            else
-              valid=1
-              if [ "$tag" = "FEXCore" ]; then
-                perl -e 'exit((shift)=~/^\d{2,6}(\.\d+)?$/ ? 0 : 1)' "$ver_raw" || valid=0
-              else
-                perl -e 'exit((shift)=~/^(?:\d+\.\d+\.\d+(?:[-+][\w().-]+)*|\d+\.\d+[0-9A-Za-z]*(?:\.\w+)*(?:[-+][\w().-]+)*|\d{4}[-.]\d{2}[-.]\d{2}|\d{8})$/ ? 0 : 1)' "$ver_raw" || valid=0
-              fi
-
-              if [ "$valid" -eq 0 ]; then
-                ver="⛔BRRR"
-                echo "⛔ suspicious format '$ver_raw', setting to $ver"
-              else
-                ver="$ver_raw"
-              fi
-            fi
-
-            if [ "$ver" = "⛔BRRR" ]; then
-              final_ver="$ver"
-            else
-              if [ "$key" = "box64" ]; then
-                base=$(echo "$ver" | perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/')
-                if [ -n "$base" ]; then
-                  maj=${base%%.*}
-                  rest=${base#*.}
-                  min=${rest%%.*}
-                  pat=${rest#*.}
-                  next=$((pat+1))
-                  # `0.3.8` `0.3.9`
-                  final_ver="\`${maj}.${min}.${pat}\` \`${maj}.${min}.${next}\`"
-                else
-                  # fallback: just wrap whatever came out
-                  final_ver="\`$ver\`"
-                fi
-              else
-                # all non-box64: plain code block
-                final_ver="\`$ver\`"
-              fi
-            fi
-
-            perl -0777 -pe "s/(<!--${key}-->)(?:[^\\|\\n]*)?(?=\\s*\\|)/\\1 ${final_ver}/g" -i README.tmp
-
-            echo "→ $final_ver"
-          done < <(jq -r 'to_entries[] | "\(.key)\t\(.value)"' map.json)
-          
-          echo "::endgroup::"
-
-          if cmp -s README.before README.tmp; then
-            echo "changed=false" >> "$GITHUB_OUTPUT"
-            echo "No changes in README."
-            rm -f README.tmp
-          else
-            mv README.tmp README.md
-            echo "changed=true" >> "$GITHUB_OUTPUT"
-            echo "README updated."
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "::error::gh (GitHub CLI) not found on runner."
+            exit 1
           fi
 
-      - name: Apply & Push
-        if: steps.resolve.outputs.changed == 'true'
+      - name: Generate
+        run: |
+          chmod +x scripts/gen-pack.sh
+          scripts/gen-pack.sh "${REPO}" "${PACK_FILE}"
+          test -f "${PACK_FILE}"
+          echo "Generated ${PACK_FILE}:"
+          head -n 50 "${PACK_FILE}" || true
+
+      - name: update readme
+        id: readme
+        run: |
+          chmod +x scripts/chore.sh
+          scripts/chore.sh "${REPO}" "${README_FILE}"
+
+      - name: commit
         run: |
           git config user.name  "github-actions[bot]"
-          git config user.email "58444892+github-actions[bot]@users.noreply.github.com"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git checkout main
+          git add "$PACK_FILE" "$README_FILE" || true
 
-          git add README.md
           if git diff --cached --quiet; then
-            echo "No staged changes; skip commit."
+            echo "No changes to commit."
             exit 0
           fi
 
-          git commit -m "ci(readme): bump versions 😻"
-          git push origin main
+          git commit -m "Refresh 😺"
 
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${TARGET_BRANCH}"; then
+              exit 0
+            fi
+
+            echo "::warning::Push rejected (remote moved). Rebasing and retrying... (${attempt}/3)"
+            git fetch origin "${TARGET_BRANCH}"
+            git rebase "origin/${TARGET_BRANCH}" || {
+              echo "::error::Rebase failed (conflict)."
+              git rebase --abort 2>/dev/null || true
+              exit 1
+            }
+          done
+
+          echo "::error::Failed to push after retries."
+          exit 1

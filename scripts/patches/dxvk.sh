@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 set -Eeuo pipefail
 
 SRC_DIR="${1:-.}"
@@ -8,7 +7,6 @@ cd "$SRC_DIR"
 
 echo "== DXVK compatibility patches =="
 
-# 1) Toolchain feature detection
 HAS_DEVINFO=false
 if compgen -G "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d9types.h >/dev/null 2>&1; then
   if grep -q "_D3DDEVINFO_RESOURCEMANAGER" "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d9types.h; then
@@ -25,7 +23,6 @@ if compgen -G "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d10*.h >/dev/null 2>&1; t
   fi
 fi
 
-# 2) D3D9 DEVINFO redefinition
 INC="src/d3d9/d3d9_include.h"
 if [[ "$HAS_DEVINFO" == true && -f "$INC" ]]; then
   if grep -q 'typedef struct _D3DDEVINFO_RESOURCEMANAGER' "$INC"; then
@@ -34,7 +31,6 @@ if [[ "$HAS_DEVINFO" == true && -f "$INC" ]]; then
   fi
 fi
 
-# 3) D3D11 UnmappedSubresource
 TEX="src/d3d11/d3d11_texture.h"
 if [[ -f "$TEX" ]]; then
   if grep -q 'UnmappedSubresource' "$TEX"; then
@@ -43,7 +39,6 @@ if [[ -f "$TEX" ]]; then
   fi
 fi
 
-# 4) D3D10 ID3D10StateBlock UUID clash
 D3D10_INT="src/d3d10/d3d10_interfaces.h"
 if [[ "$HAS_D3D10_STATEBLOCK" == true && -f "$D3D10_INT" ]]; then
   if grep -q '__CRT_UUID_DECL(ID3D10StateBlock' "$D3D10_INT"; then
