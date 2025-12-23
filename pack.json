@@ -43,19 +43,19 @@
   },
   {
     "type": "DXVK",
-    "verName": "1.11.0-sarek",
+    "verName": "1.11.0",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK/dxvk-sarek-1.11.0.wcp"
   },
   {
     "type": "DXVK",
-    "verName": "1.11.0-sarek-async",
+    "verName": "1.11.0-async",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-async-1.11.0.wcp"
   },
   {
     "type": "DXVK",
-    "verName": "1.11.0-sarek-async-arm64ec",
+    "verName": "1.11.0-async-arm64ec",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC-ARM64EC/dxvk-sarek-async-arm64ec-1.11.0.wcp"
   },
