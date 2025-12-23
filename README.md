@@ -202,6 +202,7 @@ DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
 DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
 DXVK-GPLAsync Patch [Ph42oN](https://gitlab.com/Ph42oN)<br>
 VKD3D [Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
+Freedreno Turnip driver [Mesa](https://mesa3d.org/)
 
 </h4>
 
