@@ -26,7 +26,7 @@
 > 
 > --- 
 >
-> | Bionic builds | 📝 |
+> | Bionic builds | 📖 |
 > |:-:|-|
 > | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. Great performance. |
@@ -58,7 +58,7 @@
 <summary>💡Quick Info</summary>
 <br>
 
-| Type | 📝 |
+| Type | 📖 |
 |:-:|-|
 | **FEXCore** | Prioritizes accuracy. On modern setups it can give you very good compatibility without too much fuss. |
 | **Box64** | Aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
@@ -77,7 +77,7 @@
 
 ### 🧠 Unity scripting backends
 
-| Backend | 🔍 | 🫩 | 📝 |
+| Backend | 🔍 | 🫩 | 📖 |
 |:-:|:-:|:-:|-|
 | **Old Mono** | `UnityEngine.dll` | ❌ | Very cumbersome, and even when it runs the performance drop is severe. |
 | **Mono** | `Assembly-CSharp.dll` `/MonoBleedingEdge` | 🟡 | Used by most Unity games. Performance varies, but it generally runs. |
@@ -89,7 +89,7 @@
 
 ### ⚙️ General Modern Mono Settings
 
-| FEXCore | 🏷️ | 📝 |
+| FEXCore | 🏷️ | 📖 |
 |:-:|:-:|-|
 | **TSO** | `1` | Keep as is. |
 | **MEMCPYSETTSO** | `0` | If you still get crashes/freezes with `TSO = 1`, set this to `1`. | 
@@ -97,7 +97,7 @@
 | **HALFBARRIERTSO** | `1` | Keep as is. |
 | **MULTIBLOCK** | `0` | Once TSO-related settings are stable, you can try `1` for potential performance gains. |
 
-| Box64 | 🏷️ | 📝 |
+| Box64 | 🏷️ | 📖 |
 |:-:|:-:|-|
 | **SAFEFLAGS** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
 | **STRONGMEM** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
@@ -128,7 +128,7 @@
   <summary>💡Quick Info</summary>
 <br> 
 
-| Type | 📝 |
+| Type | 📖 |
 |:-:|-|
 | **sarek**    | A modernized fork of DXVK `1.10.x` with backported fixes to keep older GPUs with weaker Vulkan support more stable. If you’re still on `1.10.x`, this is a good one to try. |
 | **gplasync** | `gpl` cache + `async` shader compilation to smooth out shader hitches and visible stutter. |
@@ -146,7 +146,7 @@
 ---
 
 ### 🔥 Adreno Driver
-| Link | 📝 |
+| Link | 📖 |
 |:-:|-|
 | [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Mesa Turnip driver |
 | [**K11MCH1**](https://github.com/K11MCH1/AdrenoToolsDrivers/releases) | Qualcomm proprietary driver + Mesa Turnip driver |
@@ -158,7 +158,7 @@
   <summary>💡Quick Info</summary>
 <br> 
   
-| Type | 📝 |
+| Type | 📖 |
 |:-:|-|
 | **Qualcomm driver** | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches. |
 | **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. |
@@ -169,7 +169,7 @@
 
 ### 📦 Runtime Packages
 
-| Type | 📝 |
+| Type | 📖 |
 |-|-|
 | [**Visual C++ x64**](https://aka.ms/vs/17/release/vc_redist.x64.exe) | 2015–2022 Redistributable |
 | [**Visual C++ x86**](https://aka.ms/vs/17/release/vc_redist.x86.exe) | 2015–2022 Redistributable |
