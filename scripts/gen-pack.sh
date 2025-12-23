@@ -103,7 +103,7 @@ def mk($type; $re; $extra; $base):
 | if   ($base | test("(?i)^wine[-_]"))     then mk("Wine";     "(?i)^wine[-_]";     null;                 $base)
   elif ($base | test("(?i)^box64[-_]"))    then mk("Box64";    "(?i)^box64[-_]";    "(?i)^bionic[-_]";    $base)
   elif ($base | test("(?i)^wowbox64[-_]")) then mk("WOWBox64"; "(?i)^wowbox64[-_]"; null;                 $base)
-  elif ($base | test("(?i)^dxvk[-_]"))     then mk("DXVK";     "(?i)^dxvk[-_]";     null;                 $base)
+  elif ($base | test("(?i)^dxvk[-_]"))     then mk("DXVK";     "(?i)^dxvk[-_]";     "(?i)^sarek[-_]";     $base)
   elif ($base | test("(?i)^fexcore[-_]"))  then mk("FEXCore";  "(?i)^fexcore[-_]";  null;                 $base)
   elif ($base | test("(?i)^vkd3d[-_]"))    then mk("VKD3D";    "(?i)^vkd3d[-_]";    "(?i)^proton[-_]";    $base)
   else empty end
