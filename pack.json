@@ -43,12 +43,6 @@
   },
   {
     "type": "DXVK",
-    "verName": "1.11.0",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK/dxvk-sarek-1.11.0.wcp"
-  },
-  {
-    "type": "DXVK",
     "verName": "1.11.0-async",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-async-1.11.0.wcp"
