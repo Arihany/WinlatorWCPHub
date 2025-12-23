@@ -12,8 +12,6 @@
 >
 > **Winlator WCP Hub** uses an open automated build pipeline to distribute essential `wcp` packages and provide simple, useful information about each type.
 >
-> Here, `wcp` refers to a custom package format used in the Winlator-Bionic fork to install components. It makes it easy to test a wide range of newer and experimental builds.
->
 > Honestly, I mostly made it for my own peace of mind. 😌
 >  
 > ---
