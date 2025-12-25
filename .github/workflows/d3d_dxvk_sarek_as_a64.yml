@@ -155,7 +155,7 @@ jobs:
           BODY: |
             - Architecture: arm64ec (system32) + x86 (syswow64)
             - For FEX only
-            - **Patched: NEON-backed SSE & Native Bitops**
+            - **Patched: NEON-backed SSE & Native Bitops & Mali black screen fix (upstream)**
         run: bash ./scripts/release.sh
 
   maintenance:
