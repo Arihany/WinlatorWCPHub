@@ -36,6 +36,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251229-09bdbcb.wcp"
   },
   {
+    "type": "Box64",
+    "verName": "0.3.9-251230-e0b4a8a",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.3.9-251230-e0b4a8a.wcp"
+  },
+  {
     "type": "DXVK",
     "verName": "1.10.3",
     "verCode": "0",
@@ -244,6 +250,12 @@
     "verName": "2512-251229-9101e70",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251229-9101e70.wcp"
+  },
+  {
+    "type": "FEXCore",
+    "verName": "2512-251230-c8d72ea",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2512-251230-c8d72ea.wcp"
   },
   {
     "type": "VKD3D",
