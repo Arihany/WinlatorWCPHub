@@ -312,6 +312,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251230-e0b4a8a.wcp"
   },
   {
+    "type": "WOWBox64",
+    "verName": "0.3.9-251231-7f6e5fc",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.3.9-251231-7f6e5fc.wcp"
+  },
+  {
     "type": "Wine",
     "verName": "10-proton-arm64ec",
     "verCode": "0",
