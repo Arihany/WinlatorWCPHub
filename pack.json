@@ -325,12 +325,6 @@
   },
   {
     "type": "Wine",
-    "verName": "10-proton-arm64ec",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WINE/wine-proton-10-arm64ec.wcp.xz"
-  },
-  {
-    "type": "Wine",
     "verName": "9.20",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WINE/wine-9.20.wcp"
