@@ -32,12 +32,13 @@
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. Great performance. |
 > | [**GameNative**](https://github.com/utkarshdalal/GameNative/releases) | Supports both glibc and bionic, featuring a sleek UI and Steam integration. |
 > 
-> - Somewhere deeper in this rabbit hole, even stranger forks exist, but they’re out of scope here.
 >
 > ---
 > 
 > </details>
->
+> <br>
+> Updates daily at 17:00 UTC.
+> 
 > Add this URL in Settings to easily download all assets:
 > ```
 > https://raw.githubusercontent.com/Arihany/WinlatorWCPHub/refs/heads/main/pack.json
