@@ -205,12 +205,6 @@
   },
   {
     "type": "FEXCore",
-    "verName": "0-260116-504d1e3",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-0-260116-504d1e3.wcp"
-  },
-  {
-    "type": "FEXCore",
     "verName": "2510",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2510.wcp"
