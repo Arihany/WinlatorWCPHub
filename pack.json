@@ -330,6 +330,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.1-260120-aca2450.wcp"
   },
   {
+    "type": "WOWBox64",
+    "verName": "0.4.1-260121-3ec5de0",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.1-260121-3ec5de0.wcp"
+  },
+  {
     "type": "Wine",
     "verName": "9.20",
     "verCode": "0",
