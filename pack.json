@@ -13,18 +13,6 @@
   },
   {
     "type": "Box64",
-    "verName": "0.4.1-1",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC/box64-bionic-0.4.1-1.wcp"
-  },
-  {
-    "type": "Box64",
-    "verName": "0.4.1-1-dev-260129-652da4f",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.1-1-dev-260129-652da4f.wcp"
-  },
-  {
-    "type": "Box64",
     "verName": "0.4.1-260124-0eb0f9d",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.1-260124-0eb0f9d.wcp"
@@ -52,6 +40,12 @@
     "verName": "0.4.1-260128-ca16ef8",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.1-260128-ca16ef8.wcp"
+  },
+  {
+    "type": "Box64",
+    "verName": "0.4.1-260129-652da4f",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.1-260129-652da4f.wcp"
   },
   {
     "type": "DXVK",
