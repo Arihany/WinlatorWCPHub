@@ -136,7 +136,7 @@ get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
     box64*|wowbox64)
-      printf '%s\t%s\n' '^v[0-9]+\.' '^v'
+      printf '%s\t%s\n' '^v[0-9]+\.[0-9]+\.[0-9]*[02468]$' '^v'
       ;;
     fexcore)
       printf '%s\t%s\n' '^FEX-[0-9]+' '^FEX-'
@@ -226,7 +226,7 @@ resolve_standard_strategy() {
         ref="$(get_upstream_head_sha)"
         short="${ref:0:7}"
         local latest latest_base dev_ver
-        latest="$(find_latest_tag "$(fetch_github_tags)" '^v[0-9]+\.' '^v')"
+        latest="$(get_latest_stable "$strategy")"
         [[ -z "$latest" ]] && latest="v0.0.0"
         latest_base="${latest#v}"
 
