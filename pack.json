@@ -264,6 +264,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2603-260317-f3e9042.wcp"
   },
   {
+    "type": "FEXCore",
+    "verName": "2603-260318-9f9b20e",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2603-260318-9f9b20e.wcp"
+  },
+  {
     "type": "VKD3D",
     "verName": "2.14.1",
     "verCode": "0",
