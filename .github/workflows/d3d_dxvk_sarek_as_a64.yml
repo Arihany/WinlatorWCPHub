@@ -1,5 +1,4 @@
 name: d3d-dxvk-sarek-async-arm64ec
-# Currently disabled. None of the related flows are in use.
 
 on:
   workflow_dispatch:
@@ -114,15 +113,11 @@ jobs:
                 exit 1
               fi
               git checkout -f "$tag_sha"
-
-              # head_sha="$(git rev-parse "origin/$UPSTREAM_BRANCH")"
-              # git checkout -f "$head_sha"
               
               git clean -fdx
               git submodule update --init --recursive
 
               bash ../scripts/patches/dxvk.sh .
-              # . ../scripts/patches/dxvk-sarek.sh .
 
               if [[ -f meson_options.txt ]]; then
               sed -i "/option('enable_ddraw'/s/value : true/value : false/" meson_options.txt
