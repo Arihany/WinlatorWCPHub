@@ -119,6 +119,10 @@ jobs:
               bash ../scripts/patches/dxvk.sh .
               # DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek.sh .
 
+              if [[ -f meson_options.txt ]]; then
+              sed -i "/option('enable_ddraw'/s/value : true/value : false/" meson_options.txt
+              fi
+
               sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-dyasync"'"/' version.h.in
 
               ../.venv/bin/meson --version || true
