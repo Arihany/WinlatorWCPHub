@@ -24,10 +24,10 @@ permissions:
 
 env:
   GH_TOKEN:        ${{ github.token }}
-  UNI_KIND:        dxvk-sarek-async-arm64ec
+  UNI_KIND:        dxvk-sarek-dyasync-arm64ec
   REL_TAG_STABLE:  DXVK-SAREK-ASYNC-ARM64EC
   UPSTREAM_REPO:   pythonlover02/DXVK-Sarek
-  UPSTREAM_BRANCH: async
+  UPSTREAM_BRANCH: main
 
 defaults:
   run:
@@ -122,9 +122,13 @@ jobs:
               git submodule update --init --recursive
 
               bash ../scripts/patches/dxvk.sh .
-              . ../scripts/patches/dxvk-sarek.sh .
+              # . ../scripts/patches/dxvk-sarek.sh .
 
-              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-async-arm64ec"'"/' version.h.in
+              if [[ -f meson_options.txt ]]; then
+              sed -i "/option('enable_ddraw'/s/value : true/value : false/" meson_options.txt
+              fi
+
+              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-dyasync-arm64ec"'"/' version.h.in
 
               bash ../scripts/guts-arm64ec.sh \
                 "$ref" \
@@ -156,7 +160,7 @@ jobs:
           BODY: |
             - Architecture: arm64ec (system32) + x86 (syswow64)
             - For FEX only
-            - **Patched: NEON-backed SSE & Native Bitops & Mali black screen fix (upstream)**
+            - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
         run: bash ./scripts/release.sh
 
   maintenance:
