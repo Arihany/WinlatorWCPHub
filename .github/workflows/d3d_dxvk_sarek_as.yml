@@ -178,6 +178,7 @@ jobs:
             - Architecture: x64 (system32) + x86 (syswow64)
             - General-purpose x64/x86 build
             - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
+            - ddraw.dll has been excluded
         run: bash ./scripts/release.sh
 
   maintenance:
