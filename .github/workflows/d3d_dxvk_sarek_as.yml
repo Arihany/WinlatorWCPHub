@@ -26,7 +26,7 @@ env:
   UNI_KIND:        dxvk-sarek-async
   REL_TAG_STABLE:  DXVK-SAREK-ASYNC
   UPSTREAM_REPO:   pythonlover02/DXVK-Sarek
-  UPSTREAM_BRANCH: async
+  UPSTREAM_BRANCH: main
 
 defaults:
   run:
@@ -117,9 +117,9 @@ jobs:
               git submodule update --init --recursive
 
               bash ../scripts/patches/dxvk.sh .
-              DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek.sh .
+              # DXVK_SAREK_MODE=common . ../scripts/patches/dxvk-sarek.sh .
 
-              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-async"'"/' version.h.in
+              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-dyasync"'"/' version.h.in
 
               ../.venv/bin/meson --version || true
 
@@ -129,7 +129,7 @@ jobs:
 
               ./package-release.sh "$ref" "$PKG_ROOT" --no-package
 
-              SRC_ROOT="${PKG_ROOT}/dxvk-async-${ref}"
+              SRC_ROOT="${PKG_ROOT}/dxvk-${ref}"
               WCP_DIR="../${REL_TAG_STABLE}_WCP"
               rm -rf "$WCP_DIR"
 
@@ -177,7 +177,7 @@ jobs:
           BODY: |
             - Architecture: x64 (system32) + x86 (syswow64)
             - General-purpose x64/x86 build
-            - **Patched: Minor correctness & ABI cleanups & Mali black screen fix (upstream)**
+            - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
         run: bash ./scripts/release.sh
 
   maintenance:
