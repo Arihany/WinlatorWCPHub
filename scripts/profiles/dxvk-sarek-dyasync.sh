@@ -10,6 +10,6 @@ WCP_TYPE="DXVK"
 WCP_VERSION_CODE=0
 #WCP_VERSION_CODE_DEFAULT=0
 #WCP_VERSION_PREFIX="async-"
-WCP_VERSION_SUFFIX="-dyasync"
+#WCP_VERSION_SUFFIX="-dyasync"
 
 WCP_DESC="Built on the Winlator WCP Hub (Upstream: pythonlover02)"
