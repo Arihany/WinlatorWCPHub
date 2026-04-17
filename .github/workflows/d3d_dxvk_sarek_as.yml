@@ -1,5 +1,5 @@
 name: d3d-dxvk-sarek-async
-
+# Due to changes in the workflow, building older versions is no longer possible
 on:
   workflow_dispatch:
     inputs:
