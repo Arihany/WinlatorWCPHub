@@ -156,6 +156,7 @@ jobs:
             - Architecture: arm64ec (system32) + x86 (syswow64)
             - For FEX only
             - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
+            - ddraw.dll has been excluded
         run: bash ./scripts/release.sh
 
   maintenance:
