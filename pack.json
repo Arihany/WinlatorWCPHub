@@ -61,9 +61,9 @@
   },
   {
     "type": "DXVK",
-    "verName": "1.12.0-async",
+    "verName": "1.12.0-dyasync",
     "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-async-1.12.0.wcp"
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC/dxvk-sarek-dyasync-1.12.0.wcp"
   },
   {
     "type": "DXVK",
@@ -346,6 +346,12 @@
     "verName": "0.4.1-260416-55e8ebf",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.1-260416-55e8ebf.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.4.1-260417-f6beb43",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.1-260417-f6beb43.wcp"
   },
   {
     "type": "Wine",
