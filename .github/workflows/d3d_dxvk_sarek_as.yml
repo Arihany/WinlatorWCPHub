@@ -23,7 +23,7 @@ permissions:
 
 env:
   GH_TOKEN:        ${{ github.token }}
-  UNI_KIND:        dxvk-sarek-async
+  UNI_KIND:        dxvk-sarek-dyasync
   REL_TAG_STABLE:  DXVK-SAREK-ASYNC
   UPSTREAM_REPO:   pythonlover02/DXVK-Sarek
   UPSTREAM_BRANCH: main
