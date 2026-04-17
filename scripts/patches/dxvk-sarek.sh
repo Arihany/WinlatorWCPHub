@@ -1,4 +1,5 @@
 # TODO: Clean this up into a proper py later
+# Currently disabled. All related flows are not in use.
 set -Eeuo pipefail
 
 die()  { echo "::error::$*" >&2; exit 1; }
