@@ -1,4 +1,5 @@
 name: d3d-dxvk-sarek-async-arm64ec
+# Currently disabled. None of the related flows are in use.
 
 on:
   workflow_dispatch:
