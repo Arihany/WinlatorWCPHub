@@ -48,6 +48,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260422-96fc30b.wcp"
   },
   {
+    "type": "Box64",
+    "verName": "0.4.3-260423-e11c10c",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260423-e11c10c.wcp"
+  },
+  {
     "type": "DXVK",
     "verName": "1.10.3",
     "verCode": "0",
