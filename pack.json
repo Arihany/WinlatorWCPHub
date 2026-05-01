@@ -288,6 +288,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2604-260429-098c4c5.wcp"
   },
   {
+    "type": "FEXCore",
+    "verName": "2604-260501-8ab0075",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2604-260501-8ab0075.wcp"
+  },
+  {
     "type": "VKD3D",
     "verName": "2.14.1",
     "verCode": "0",
@@ -364,6 +370,12 @@
     "verName": "0.4.3-260430-c6418bc",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260430-c6418bc.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.4.3-260501-234105f",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260501-234105f.wcp"
   },
   {
     "type": "Wine",
