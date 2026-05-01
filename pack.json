@@ -19,12 +19,6 @@
   },
   {
     "type": "Box64",
-    "verName": "0.4.3-260422-96fc30b",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260422-96fc30b.wcp"
-  },
-  {
-    "type": "Box64",
     "verName": "0.4.3-260423-e11c10c",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260423-e11c10c.wcp"
@@ -265,12 +259,6 @@
   },
   {
     "type": "FEXCore",
-    "verName": "2604-260422-701555e",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2604-260422-701555e.wcp"
-  },
-  {
-    "type": "FEXCore",
     "verName": "2604-260424-4b02c04",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-Nightly/FEXCore-2604-260424-4b02c04.wcp"
@@ -346,12 +334,6 @@
     "verName": "0.4.2",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64/wowbox64-0.4.2.wcp"
-  },
-  {
-    "type": "WOWBox64",
-    "verName": "0.4.3-260422-96fc30b",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260422-96fc30b.wcp"
   },
   {
     "type": "WOWBox64",
