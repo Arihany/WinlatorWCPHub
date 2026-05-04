@@ -28,7 +28,7 @@
 >
 > | Bionic builds | 📖 |
 > |:-:|-|
-> | [**Winlator-CMod**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
+> | [**Winlator-CMod [OUTDATED]**](https://github.com/coffincolors/winlator/releases) | Baseline Bionic build with excellent controller support. |
 > | [**Winlator-Ludashi**](https://github.com/StevenMXZ/Winlator-Ludashi/releases) | Keeps up with the latest upstream code while remaining close to vanilla. Great performance. |
 > | [**GameNative**](https://github.com/utkarshdalal/GameNative/releases) | Supports both glibc and bionic, featuring a sleek UI and Steam integration. |
 > 
