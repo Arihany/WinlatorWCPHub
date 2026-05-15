@@ -19,12 +19,6 @@
   },
   {
     "type": "Box64",
-    "verName": "0.4.3-260510-740d39c",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260510-740d39c.wcp"
-  },
-  {
-    "type": "Box64",
     "verName": "0.4.3-260511-cf04087",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/BOX64-BIONIC-NIGHTLY/box64-bionic-0.4.3-260511-cf04087.wcp"
@@ -358,12 +352,6 @@
     "verName": "0.4.2",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64/wowbox64-0.4.2.wcp"
-  },
-  {
-    "type": "WOWBox64",
-    "verName": "0.4.3-260510-740d39c",
-    "verCode": "0",
-    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260510-740d39c.wcp"
   },
   {
     "type": "WOWBox64",
