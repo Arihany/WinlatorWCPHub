@@ -148,43 +148,8 @@
 ### 🔥 Adreno Driver
 | Link | 📖 |
 |:-:|-|
-| [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Mesa Turnip driver |
-| [**GameNative**](https://gamenative.app/drivers/) | Qualcomm proprietary driver + Mesa Turnip driver |
-
-
-<details>
-  <summary>💡Quick Info</summary>
-<br> 
-  
-| Type | 📖 |
-|:-:|-|
-| **Qualcomm driver** | Extracted from the official Adreno driver of a recent device. Partially compatible with similar chipsets. Emulation may show reduced performance or rendering glitches. |
-| **Mesa turnip driver** | Open source Mesa driver with broader Vulkan support and emulator friendly behavior. Often more compatible or stable across devices. |
-
-</details>
-
----
-
-### 📦 Runtime Packages
-
-| Type | 📖 |
-|-|-|
-| [**Visual C++ x64**](https://aka.ms/vs/17/release/vc_redist.x64.exe) | 2015–2022 Redistributable |
-| [**Visual C++ x86**](https://aka.ms/vs/17/release/vc_redist.x86.exe) | 2015–2022 Redistributable |
-| [**Visual C++ ARM64**](https://aka.ms/vs/17/release/vc_redist.arm64.exe) | 2015–2022 Redistributable |
-| [**Wine-Mono**](https://dl.winehq.org/wine/wine-mono/) | .NET runtime for Wine (**Install only when the built-in tool is not working**) |
-| [**Wine-Gecko**](https://dl.winehq.org/wine/wine-gecko/) | HTML engine for Wine (**Install only when the built-in tool is not working**) |
-| [**DirectX (June 2010)**](https://download.microsoft.com/download/8/4/a/84a35bf1-dafe-4ae8-82af-ad2ae20b6b14/directx_Jun2010_redist.exe) | **Install only if missing Legacy DirectX DLL** |
-| [**PhysX Legacy**](https://www.nvidia.com/content/DriverDownload-March2009/confirmation.php?url=/Windows/9.13.0604/PhysX-9.13.0604-SystemSoftware-Legacy.msi&lang=us&type=Other) | **Install only if an old game requests PhysX DLL** |
-
-<details>
-  <summary>💡Quick Info</summary>
-<br>
-
-- Install only the minimum necessary.
-- If older VC++ is needed, try an [**AIO package**](https://www.techpowerup.com/download/visual-c-redistributable-runtime-package-all-in-one/). <br>
-
-</details>
+| [**StevenMXZ**](https://github.com/StevenMXZ/freedreno_turnip-CI/releases) | Qualcomm proprietary driver + Mesa Turnip driver for all |
+| [**whitebelyash**](https://github.com/whitebelyash/AdrenoToolsDrivers/releases) | Mesa Turnip driver for A8XX |
 
 ---
 <br>
