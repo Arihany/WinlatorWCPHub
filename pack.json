@@ -222,6 +222,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-2.7.1.wcp"
   },
   {
+    "type": "DXVK",
+    "verName": "3.0",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-3.0.wcp"
+  },
+  {
     "type": "FEXCore",
     "verName": "2510",
     "verCode": "0",
