@@ -394,5 +394,11 @@
     "verName": "0.4.3-260625-3bf34a7",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260625-3bf34a7.wcp"
+  },
+  {
+    "type": "WOWBox64",
+    "verName": "0.4.3-260626-7da44e5",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/WOWBOX64-NIGHTLY/wowbox64-0.4.3-260626-7da44e5.wcp"
   }
 ]
