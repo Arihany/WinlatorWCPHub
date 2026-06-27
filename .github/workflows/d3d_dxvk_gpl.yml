@@ -9,11 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(e.g. v2.4.1-1, v2.7.1-1). Empty = auto"
-      force:
-        type: boolean
-        default: false
-        description: "Force build v2.4.1-1 pre-reg only"
+        description: "(e.g. 2.4.1-1-pre-reg, 2.4.1, 2.7.1-1, latest). Empty = presets + latest"
 
   schedule:
     - cron: "0 17 * * *"
@@ -46,8 +42,8 @@ jobs:
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
-      missing:     ${{ steps.override.outputs.missing || steps.check.outputs.missing }}
-      list:        ${{ steps.override.outputs.list    || steps.check.outputs.list    }}
+      missing:     ${{ steps.check.outputs.missing }}
+      list:        ${{ steps.check.outputs.list }}
     steps:
 
       - name: Checkout
@@ -55,14 +51,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Force Build
-        id: override
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true }}
-        run: bash ./scripts/forcebuild/dxvk-gpl-241-pr.sh
-
       - name: Check Upstream & Queue
         id: check
-        if: ${{ ! (github.event_name == 'workflow_dispatch' && inputs.force == true) }}
         run: bash ./scripts/guard.sh
 
   build:
@@ -73,7 +63,6 @@ jobs:
     timeout-minutes: 60
     env:
       GPLASYNC_BASE_URL: https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches
-      FORCE_PRE_REG: ${{ github.event_name == 'workflow_dispatch' && inputs.force || false }}
     steps:
 
       - name: Checkout
@@ -97,7 +86,7 @@ jobs:
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
         run: |
-          mkdir -p _logs out src/out patches
+          mkdir -p out src/out patches
 
           cd src
           git fetch --tags --force
@@ -124,15 +113,20 @@ jobs:
             fi
             
             GPL_TAG="${ref}"
+            BINSEM=false
+            DIRTY_SUFFIX="gplasync"
+            PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh"
+            if [[ "$filename" == *-binsem.wcp ]]; then
+              BINSEM=true
+              DIRTY_SUFFIX="${DIRTY_SUFFIX}-binsem"
+              PROFILE_SH="../scripts/profiles/${UNI_KIND}-binsem.sh"
+            fi
             
-            if [[ "${FORCE_PRE_REG:-false}" == "true" && "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
+            if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
               DXVK_REF="$ref"
             else
               DXVK_REF="v${DXVK_BASE}"
             fi
-
-            LOG_PATH="../_logs/${UNI_KIND}-${DXVK_BASE}-${GPL_REV}.log"
-
             {
               echo "::group::Building ${GPL_TAG} (dxvk ${DXVK_REF}, rev ${GPL_REV})"
 
@@ -144,8 +138,10 @@ jobs:
 
               bash ../scripts/patches/dxvk.sh .
 
-              if [[ "${FORCE_PRE_REG:-false}" == "true" ]]; then
-                PATCH_LOCAL="../scripts/patches/dxvk-gplasync-2.4.1-1-pre-reg.patch"
+              if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
+                PATCH_NAME="dxvk-gplasync-2.4.1-1-pre-reg.patch"
+                PATCH_LOCAL="../patches/${PATCH_NAME}"
+                cp "../scripts/patches/${PATCH_NAME}" "${PATCH_LOCAL}"
                 echo "Using local pre-regression GPLAsync patch: ${PATCH_LOCAL}"
               else
                 PATCH_NAME="dxvk-gplasync-${DXVK_BASE}-${GPL_REV}.patch"
@@ -161,17 +157,25 @@ jobs:
                     PATCH_LOCAL="../patches/${PATCH_NAME}"
 
                     echo "Downloading fallback GPLAsync patch: ${PATCH_NAME}"
-                    curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"
+                    if ! curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"; then
+                      echo "::warning::GPLAsync patch not found for ${DXVK_BASE}-${GPL_REV}; skipping." >&2
+                      echo "::endgroup::"
+                      continue
+                    fi
                   else
-                    echo "::error::Failed to download GPLAsync patch for ${DXVK_BASE}-${GPL_REV}" >&2
-                    exit 1
+                    echo "::warning::GPLAsync patch not found for ${DXVK_BASE}-${GPL_REV}; skipping." >&2
+                    echo "::endgroup::"
+                    continue
                   fi
                 fi
               fi
 
-              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-gplasync'/g" "$PATCH_LOCAL" || true
+              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-${DIRTY_SUFFIX}'/g" "$PATCH_LOCAL" || true
 
               patch -p1 < "${PATCH_LOCAL}"
+              if $BINSEM; then
+                patch -p1 < ../scripts/patches/dxvk_binsem.patch
+              fi
 
               ../.venv/bin/meson --version || true
 
@@ -183,45 +187,18 @@ jobs:
 
               ./package-release.sh "${PKG_VERSION}" "$PKG_ROOT" --no-package
 
-              SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}" 
-              WCP_DIR="../${REL_TAG_STABLE}_WCP"
-              rm -rf "$WCP_DIR"
-
-              SRC_64="$SRC_ROOT/x64"
-              SRC_32="$SRC_ROOT/x32"
-
-              [[ -d "$SRC_ROOT/x64/bin" ]] && SRC_64="$SRC_ROOT/x64/bin"
-
-              if [[ -d "$SRC_ROOT/x32/bin" ]]; then
-                SRC_32="$SRC_ROOT/x32/bin"
-              elif [[ -d "$SRC_ROOT/x86" ]]; then
-                SRC_32="$SRC_ROOT/x86"
-              fi
-
-              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
-              bash ../scripts/packing.sh \
-                "$SRC_64" \
-                "$SRC_32" \
-                "$WCP_DIR" \
+              SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}"
+              bash ../scripts/pack-release-tree.sh \
+                "$SRC_ROOT" \
+                "../${REL_TAG_STABLE}_WCP" \
                 "$ver_name" \
-                "../out/${filename}"
+                "../out/${filename}" \
+                "$PROFILE_SH"
 
               echo "::endgroup::"
-            } 2>&1 | tee "$LOG_PATH"
+            }
 
           done <<< "$TO_BUILD"
-
-      - name: Process Logs
-        if: always()
-        run: bash ./scripts/log.sh _logs/*.log
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.REL_TAG_STABLE }}-logs
-          path: _logs/
-
       - name: Release
         env:
           REPO:           ${{ github.repository }}
@@ -229,9 +206,9 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: x64 (system32) + x86 (syswow64)
             - General-purpose x64/x86 build
             - pre-reg: Last version before the performance drop on Turnip driver
+            - binsem: Avoids Turnip performance loss without env vars. May be unstable.
         run: bash ./scripts/release.sh
 
   maintenance:

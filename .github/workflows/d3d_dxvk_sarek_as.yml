@@ -84,7 +84,7 @@ jobs:
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
         run: |
-          mkdir -p _logs out src/out
+          mkdir -p out src/out
 
           cd src
           git fetch origin "$UPSTREAM_BRANCH" --force
@@ -97,9 +97,6 @@ jobs:
               echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
               continue
             fi
-
-            LOG_PATH="../_logs/${UNI_KIND}-${ver_name}-build.log"
-
             {
               echo "::group::Building ${ref} (${ver_name})"
 
@@ -130,44 +127,17 @@ jobs:
               ./package-release.sh "$ref" "$PKG_ROOT" --no-package
 
               SRC_ROOT="${PKG_ROOT}/dxvk-${ref}"
-              WCP_DIR="../${REL_TAG_STABLE}_WCP"
-              rm -rf "$WCP_DIR"
-
-              SRC_64="$SRC_ROOT/x64"
-              SRC_32="$SRC_ROOT/x32"
-
-              [[ -d "$SRC_ROOT/x64/bin" ]] && SRC_64="$SRC_ROOT/x64/bin"
-
-              if [[ -d "$SRC_ROOT/x32/bin" ]]; then
-                SRC_32="$SRC_ROOT/x32/bin"
-              elif [[ -d "$SRC_ROOT/x86" ]]; then
-                SRC_32="$SRC_ROOT/x86"
-              fi
-
-              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh" \
-              bash ../scripts/packing.sh \
-                "$SRC_64" \
-                "$SRC_32" \
-                "$WCP_DIR" \
+              bash ../scripts/pack-release-tree.sh \
+                "$SRC_ROOT" \
+                "../${REL_TAG_STABLE}_WCP" \
                 "$ver_name" \
-                "../out/${filename}"
+                "../out/${filename}" \
+                "../scripts/profiles/${UNI_KIND}.sh"
 
               echo "::endgroup::"
-            } 2>&1 | tee "$LOG_PATH"
+            }
 
           done <<< "$TO_BUILD"
-
-      - name: Process Logs
-        if: always()
-        run: bash ./scripts/log.sh _logs/*.log
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.REL_TAG_STABLE }}-logs
-          path: _logs/
-
       - name: Release
         env:
           REPO:           ${{ github.repository }}
@@ -175,10 +145,8 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: x64 (system32) + x86 (syswow64)
             - General-purpose x64/x86 build
             - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
-            - ddraw.dll has been excluded
         run: bash ./scripts/release.sh
 
   maintenance:

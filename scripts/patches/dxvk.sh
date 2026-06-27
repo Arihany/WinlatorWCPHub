@@ -47,4 +47,10 @@ if [[ "$HAS_D3D10_STATEBLOCK" == true && -f "$D3D10_INT" ]]; then
   fi
 fi
 
+PIPE="src/dxvk/dxvk_pipemanager.cpp"
+if [[ -f "$PIPE" ]] && grep -qzP 'std::piecewise_construct,\s*std::tuple\(\)\s*,' "$PIPE"; then
+  echo "Patching empty key-tuple piecewise emplace (libc++ compat) in $PIPE..."
+  perl -0777 -i -pe 's/(std::piecewise_construct,\s*)std::tuple\(\)(\s*,)/${1}std::tuple(key)${2}/g' "$PIPE"
+fi
+
 echo "== DXVK compatibility patches done =="

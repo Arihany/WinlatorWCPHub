@@ -3,18 +3,13 @@ name: x86-fexcore
 on:
   workflow_dispatch:
     inputs:
-      channel:
-        type: choice
-        description: "auto=stable+nightly, stable=tag, nightly=HEAD"
-        options: [auto, stable, nightly]
-        default: auto
       host:
         type: boolean
         default: false
         description: "Self-hosted"
       version:
         type: string
-        description: "Stable only: (e.g. 'FEX-2508, FEX-2508.1'). Empty = latest stable"
+        description: "(e.g. 'FEX-2605, 2605'). Empty = presets (2605) + latest stable"
 
   schedule:
     - cron: "0 17 * * *"
@@ -30,7 +25,6 @@ env:
   GH_TOKEN:        ${{ github.token }}
   UNI_KIND:        fexcore
   REL_TAG_STABLE:  FEXCore
-  REL_TAG_NIGHTLY: FEXCore-Nightly
   UPSTREAM_REPO:   FEX-Emu/FEX
 
 defaults:
@@ -43,7 +37,7 @@ jobs:
     runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
     timeout-minutes: 5
     env:
-      IN_CHANNEL:  ${{ github.event_name == 'workflow_dispatch' && inputs.channel || 'stable' }}
+      IN_CHANNEL:  stable
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
@@ -98,7 +92,7 @@ jobs:
         run: bash ./scripts/install-deps-ubuntu.sh
 
       - name: Setup Build Env
-        run: bash ./scripts/setup-llvm.sh
+        run: bash ./scripts/setup-llvm-meson.sh
 
       - name: Checkout Source
         uses: actions/checkout@v4
@@ -116,9 +110,9 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p _logs artifacts
-          LOG_PATH="_logs/${UNI_KIND}-${VER_NAME}-build.log"
+          source ./scripts/arm64ec-common.sh
 
+          mkdir -p artifacts
           {
             echo "::group::Building ${REF} (${VER_NAME})"
 
@@ -131,6 +125,8 @@ jobs:
               local triple="$1"
               local dest="$2"
               local build_dir="build-${triple}"
+              local arch_flags
+              arch_flags="$(arm64ec_cpu_flags)"
 
               rm -rf "$build_dir"
               mkdir "$build_dir"
@@ -139,10 +135,12 @@ jobs:
               cmake -GNinja -Wno-dev \
                 -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_TOOLCHAIN_FILE=../Data/CMake/toolchain_mingw.cmake \
+                -DCMAKE_C_FLAGS="${arch_flags}" \
+                -DCMAKE_CXX_FLAGS="${arch_flags}" \
                 -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-windows \
                 -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
                 -DENABLE_LTO=False \
-                -DENABLE_ASSERTIONS=False \
+                -DTUNE_CPU=none \
                 -DMINGW_TRIPLE="${triple}-w64-mingw32" \
                 -DBUILD_TESTING=False \
                 -DCMAKE_INSTALL_PREFIX=/usr ..
@@ -192,26 +190,14 @@ jobs:
               "artifacts/${FILENAME}"
 
             echo "::endgroup::"
-          } 2>&1 | tee "$LOG_PATH"
-
-      - name: Process Logs
-        if: always()
-        run: bash ./scripts/log.sh _logs/*.log
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.REL_TAG }}-${{ env.VER_NAME }}-logs
-          path: _logs/
-
+          }
       - name: Release
         env:
           REPO:           ${{ github.repository }}
           ARTIFACT_GLOB:  "artifacts/${{ env.FILENAME }}"
           VERSION_PREFIX: "FEXCore-" ###
           BODY: |
-            - Architecture: ARM64 host (Wine / MinGW) + 64-bit x86 guest
+            - Common: Uses Valve-style build flags to improve performance. Compatibility may be reduced.
         run: bash ./scripts/release.sh
 
   maintenance:

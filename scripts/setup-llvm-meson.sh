@@ -1,7 +1,7 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-LLVM_MINGW_TAG="${LLVM_MINGW_TAG:-20251216}"
+LLVM_MINGW_TAG="${LLVM_MINGW_TAG:-20260407}"
 LLVM_MINGW_REPO="${LLVM_MINGW_REPO:-mstorsjo/llvm-mingw}"
 TOOLCHAIN_DIR="${TOOLCHAIN_DIR:-/opt/llvm-mingw}"
 
@@ -29,19 +29,16 @@ $SUDO mkdir -p "$TOOLCHAIN_DIR"
 $SUDO tar -C "$TOOLCHAIN_DIR" --strip-components=1 -xJf llvm.tar.xz
 echo "$TOOLCHAIN_DIR/bin" >> "$GITHUB_PATH"
 
-if [[ ! -f "$TOOLCHAIN_DIR/x86_64-w64-mingw32/include/spirv/unified1/spirv.hpp" ]]; then
+SPIRV_DEST="$TOOLCHAIN_DIR/generic-w64-mingw32/include"
+[ -d "$SPIRV_DEST" ] || SPIRV_DEST="$TOOLCHAIN_DIR/x86_64-w64-mingw32/include"
+
+if [ -d "$SPIRV_DEST" ] && [ ! -f "$SPIRV_DEST/spirv/unified1/spirv.hpp" ]; then
   SPV_TMP="$(mktemp -d)"
   cleanup_spv_tmp() { rm -rf "$SPV_TMP"; }
-  trap cleanup_spv_tmp RETURN
+  trap cleanup_spv_tmp EXIT
 
   git clone --depth=1 https://github.com/KhronosGroup/SPIRV-Headers.git "$SPV_TMP/SPIRV-Headers"
-
-  for trip in x86_64-w64-mingw32 i686-w64-mingw32; do
-    if [ -d "$TOOLCHAIN_DIR/$trip/include" ]; then
-      echo "Installing SPIRV-Headers into $TOOLCHAIN_DIR/$trip/include/spirv ..."
-      $SUDO mkdir -p "$TOOLCHAIN_DIR/$trip/include/spirv"
-      $SUDO cp -r "$SPV_TMP/SPIRV-Headers/include/spirv/"* \
-        "$TOOLCHAIN_DIR/$trip/include/spirv/"
-    fi
-  done
+  echo "Installing SPIRV-Headers into $SPIRV_DEST/spirv (shared across all triples) ..."
+  $SUDO mkdir -p "$SPIRV_DEST/spirv"
+  $SUDO cp -r "$SPV_TMP/SPIRV-Headers/include/spirv/"* "$SPIRV_DEST/spirv/"
 fi

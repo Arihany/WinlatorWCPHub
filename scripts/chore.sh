@@ -21,8 +21,7 @@ default_map_json() {
   "dxvk":     "DXVK",
   "sarek":    "DXVK-SAREK-ASYNC",
   "gplasync": "DXVK-GPLASYNC",
-  "vkd3d":    "VKD3D-PROTON",
-  "box64":    "BOX64-BIONIC"
+  "vkd3d":    "VKD3D-PROTON"
 }
 JSON
 }
@@ -74,22 +73,6 @@ format_final() {
 
   if [ "$ver" = "⛔BRRR" ]; then
     printf "%s" "$ver"
-    return 0
-  fi
-
-  if [ "$key" = "box64" ]; then
-    local base maj min pat next
-    base="$(perl -ne 'print "$1.$2.$3" if /^(\d+)\.(\d+)\.(\d+)/' <<<"$ver")"
-    if [ -n "$base" ]; then
-      maj="${base%%.*}"
-      base="${base#*.}"
-      min="${base%%.*}"
-      pat="${base#*.}"
-      next="$((pat + 1))"
-      printf "\`%s.%s.%s\` \`%s.%s.%s\`" "$maj" "$min" "$pat" "$maj" "$min" "$next"
-    else
-      printf "\`%s\`" "$ver"
-    fi
     return 0
   fi
 

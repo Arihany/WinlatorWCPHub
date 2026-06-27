@@ -1,8 +1,6 @@
-#  /\_/\
-# (=•ᆽ•=)づ︻╦╤─
-# TODO: Move guard logic to py, integrate the pre-reg into the core strategy
 set -Eeuo pipefail
 
+source "$(dirname "${BASH_SOURCE[0]}")/build-targets.sh"
 
 : "${UNI_KIND:?UNI_KIND is not set}"
 : "${UPSTREAM_REPO:?UPSTREAM_REPO is not set}"
@@ -135,9 +133,6 @@ check_github_tag_exists() {
 get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
-    box64*|wowbox64)
-      printf '%s\t%s\n' '^v[0-9]+\.[0-9]+\.[0-9]*[02468]$' '^v'
-      ;;
     fexcore)
       printf '%s\t%s\n' '^FEX-[0-9]+' '^FEX-'
       ;;
@@ -189,6 +184,24 @@ fetch_gitlab_tags_all() {
   done
 }
 
+gplasync_patch_available() {
+  local base="$1"
+  local rev="$2"
+  local base_url="${GPLASYNC_BASE_URL:-https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches}"
+  local patch_name="dxvk-gplasync-${base}-${rev}.patch"
+
+  if curl -fsI "${base_url}/${patch_name}" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  if [[ "$base" == "2.4.1" && "$rev" == "1" ]] &&
+     curl -fsI "${base_url}/dxvk-gplasync-2.4-1.patch" >/dev/null 2>&1; then
+    return 0
+  fi
+
+  return 1
+}
+
 find_latest_tag() {
   local raw_tags="$1" regex="$2" strip_pat="$3"
   local filtered
@@ -216,52 +229,13 @@ resolve_standard_strategy() {
   fi
 
   case "$strategy" in
-    box64-bionic|wowbox64)
-      if [[ "$channel" == "stable" ]]; then
-        [[ -z "$input_arg" ]] && return 1
-        ref="$input_arg"
-        ver_name="${input_arg#v}"
-        filename="${strategy}-${ver_name}.wcp"
-      else
-        ref="$(get_upstream_head_sha)"
-        short="${ref:0:7}"
-        local latest latest_base dev_ver
-        latest="$(get_latest_stable "$strategy")"
-        [[ -z "$latest" ]] && latest="v0.0.0"
-        latest_base="${latest#v}"
-
-        # Heuristic: Bump patch version
-        local v1 v2 v3 rest
-        IFS='.' read -r v1 v2 v3 rest <<< "$latest_base"
-        if [[ -z "$rest" && "$v3" =~ ^[0-9]+$ ]]; then
-          dev_ver="${v1}.${v2}.$((v3 + 1))"
-        else
-          dev_ver="${latest_base}-dev"
-        fi
-
-        ver_name="${dev_ver}-${dc}-${short}"
-        filename="${strategy}-${ver_name}.wcp"
-      fi
-      ;;
-
     fexcore)
-      if [[ "$channel" == "stable" ]]; then
-        [[ -z "$input_arg" ]] && return 1
-        ref="$input_arg"
-        ver_name="${input_arg#FEX-}"
-        filename="FEXCore-${ver_name}.wcp"
-      else
-        ref="$(get_upstream_head_sha)"
-        short="${ref:0:7}"
-        
-        local latest base
-        latest="$(find_latest_tag "$(fetch_github_tags)" '^FEX-[0-9]+' '^FEX-')"
-        [[ -z "$latest" ]] && latest="FEX-0"
-        base="${latest#FEX-}"
-        
-        ver_name="${base}-${dc}-${short}"
-        filename="FEXCore-${ver_name}.wcp"
-      fi
+      # FEX is stable-only (nightly dropped).
+      [[ "$channel" == "stable" ]] || { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
+      [[ -z "$input_arg" ]] && return 1
+      ref="$input_arg"
+      ver_name="${input_arg#FEX-}"
+      filename="FEXCore-${ver_name}.wcp"
       ;;
 
     dxvk*|vkd3d*)
@@ -270,12 +244,7 @@ resolve_standard_strategy() {
       
       ref="$input_arg"
       local base
-      if [[ "$ref" =~ ^v[0-9] ]]; then
-        base="${ref#v}"
-      else
-        base="$(sed -E 's/^[^0-9]+//' <<<"$ref")"
-      fi
-      [[ -z "$base" ]] && base="$ref"
+      base="$(version_base_from_ref "$ref")"
 
       local prefix="$strategy"
       [[ "$prefix" != *- ]] && prefix="${prefix}-"
@@ -316,40 +285,74 @@ resolve_gplasync_strategy() {
   local targets_file="$TMP_DIR/gplasync_targets.txt"
   : > "$targets_file"
 
-  if [[ -n "$IN_VERSION" ]]; then
-    # Manual
-    IFS=',' read -ra reqs <<< "$IN_VERSION"
-    for raw in "${reqs[@]}"; do
-      local tag; tag="$(echo "$raw" | xargs)"
-      [[ -z "$tag" ]] && continue
-      
-      if [[ ! "$tag" =~ ^v([0-9]+\.[0-9]+(\.[0-9]+)?)\-([0-9]+)$ ]]; then
-        echo "::error::Invalid tag format '$tag' (expect vX.Y-R)" >&2; continue
-      fi
-      if ! grep -Fxq "$tag" "$tags_file"; then
-         echo "::error::Tag '$tag' not found on GitLab." >&2; continue
-      fi
-      echo "${BASH_REMATCH[1]} ${BASH_REMATCH[3]}" >> "$targets_file"
-    done
-  else
-    # Auto: pick the single latest tag overall
-    latest_line="$(
-      grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' "$tags_file" \
-        | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
-        | sort -k1,1V -k2,2n \
-        | tail -n1
-    )"
-    [[ -n "$latest_line" ]] || { echo "::error::No valid vX.Y-R tags found in GitLab" >&2; return 1; }
-    printf '%s\n' "$latest_line" > "$targets_file"
+  local requested_versions="${IN_VERSION:-}"
+  if [[ -z "$requested_versions" ]]; then
+    requested_versions="$(default_versions_for_kind "$UNI_KIND")"
   fi
+
+  IFS=',' read -ra reqs <<< "$requested_versions"
+  for raw in "${reqs[@]}"; do
+    local req tag_line base rev
+    req="$(echo "$raw" | xargs)"
+    [[ -z "$req" ]] && continue
+
+    if is_gplasync_prereg_token "$req"; then
+      local pre_reg_entry
+      pre_reg_entry="$(pre_reg_queue_entry "$UNI_KIND" "$req")"
+      add_to_queue "stable" "$pre_reg_entry"
+      continue
+    elif is_latest_token "$req"; then
+      tag_line="$(
+        grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' "$tags_file" \
+          | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
+          | sort -k1,1V -k2,2n \
+          | tail -n1
+      )"
+    elif [[ "$req" =~ ^v?([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$ ]]; then
+      base="${BASH_REMATCH[1]}"
+      rev="${BASH_REMATCH[3]}"
+      tag_line="${base} ${rev}"
+      if ! grep -Fxq "v${base}-${rev}" "$tags_file"; then
+        echo "::warning::GPLAsync tag 'v${base}-${rev}' not found; skipping." >&2
+        continue
+      fi
+    elif [[ "$req" =~ ^v?([0-9]+\.[0-9]+(\.[0-9]+)?)$ ]]; then
+      base="${BASH_REMATCH[1]}"
+      tag_line="$(
+        grep -E "^v${base}-[0-9]+$" "$tags_file" \
+          | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
+          | sort -k1,1V -k2,2n \
+          | tail -n1
+      )"
+      if [[ -z "$tag_line" ]]; then
+        echo "::warning::No GPLAsync tag found for DXVK ${base}; skipping." >&2
+        continue
+      fi
+    else
+      echo "::warning::Invalid GPLAsync version '$req'; expected X.Y[.Z], X.Y[.Z]-R, or latest. Skipping." >&2
+      continue
+    fi
+
+    [[ -n "$tag_line" ]] || continue
+    read -r base rev <<< "$tag_line"
+    if ! gplasync_patch_available "$base" "$rev"; then
+      echo "::warning::GPLAsync patch not found for ${base}-${rev}; skipping." >&2
+      continue
+    fi
+    echo "${base} ${rev}" >> "$targets_file"
+  done
 
   while read -r base rev; do
     [[ -z "$base" ]] && continue
     if grep -Fq "${base} ${rev}" "$existing_pairs_file"; then
-      echo "  -> Skipped (Already exists: ${base}-${rev})" >&2; continue
+      echo "  -> Skipped (Already exists: ${base}-${rev})" >&2
+    else
+      add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
     fi
 
-    add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
+    if dxvk_binsem_kind_supported "$UNI_KIND" && dxvk_binsem_supported_base "$base"; then
+      add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}-binsem.wcp|"
+    fi
   done < "$targets_file"
 }
 
@@ -377,9 +380,49 @@ add_to_queue() {
     fi
   fi
 
+  if grep -Fq "|$filename|" <<< "$QUEUE"; then
+    echo "  -> Skipped (Already queued: $filename)" >&2
+    return
+  fi
+
   echo "  -> Queued: $filename" >&2
   QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${rel_tag}|${filename}|${short}"$'\n'
   HAS_WORK=true
+}
+
+queue_stable_versions() {
+  local csv="$1"
+  local raw ref res
+
+  IFS=',' read -ra _stable_reqs <<< "$csv"
+  for raw in "${_stable_reqs[@]}"; do
+    raw="$(echo "$raw" | xargs)"
+    [[ -z "$raw" ]] && continue
+
+    if pre_reg_entry="$(pre_reg_queue_entry "$UNI_KIND" "$raw" 2>/dev/null)"; then
+      add_to_queue "stable" "$pre_reg_entry"
+      continue
+    elif is_latest_token "$raw"; then
+      ref="$(get_latest_stable)"
+      [[ -n "$ref" ]] || { echo "::warning::No stable tag found for $UNI_KIND"; continue; }
+    else
+      ref="$(normalize_github_version_ref "$UNI_KIND" "$raw")"
+      check_github_tag_exists "$ref"
+    fi
+
+    res="$(resolve_standard_strategy "stable" "$ref")"
+    [[ -n "$res" ]] && add_to_queue "stable" "$res"
+
+    if dxvk_binsem_kind_supported "$UNI_KIND"; then
+      local base prefix
+      base="$(version_base_from_ref "$ref")"
+      if dxvk_binsem_supported_base "$base"; then
+        prefix="$UNI_KIND"
+        [[ "$prefix" != *- ]] && prefix="${prefix}-"
+        add_to_queue "stable" "${ref}|${base}|${prefix}${base}-binsem.wcp|"
+      fi
+    fi
+  done
 }
 
 dispatch_logic() {
@@ -400,14 +443,15 @@ dispatch_logic() {
   # Auto / Schedule
   if [[ "$IS_SCHEDULE" == "true" || "$IN_CHANNEL" == "auto" ]]; then
     echo "::group::Strategy: Auto/Schedule ($UNI_KIND)"
-    
-    local latest; latest="$(get_latest_stable)"
-    if [[ -n "$latest" ]]; then
-       local res; res="$(resolve_standard_strategy "stable" "$latest")"
-       [[ -n "$res" ]] && add_to_queue "stable" "$res"
+
+    local requested_versions=""
+    if default_versions_for_kind "$UNI_KIND" >/dev/null 2>&1; then
+      requested_versions="$(default_versions_for_kind "$UNI_KIND")"
     else
-       echo "::warning::No stable tag found for $UNI_KIND"
+      requested_versions="latest"
     fi
+
+    queue_stable_versions "$requested_versions"
 
     # Nightly
     if [[ "$has_nightly" == "true" ]]; then
@@ -420,26 +464,16 @@ dispatch_logic() {
   else
     echo "::group::Strategy: Manual ($IN_CHANNEL / $IN_VERSION)"
     if [[ "$IN_CHANNEL" == "stable" ]]; then
-        if [[ -z "$IN_VERSION" ]]; then
-           # No version specified -> fetch latest
-           local latest; latest="$(get_latest_stable)"
-           if [[ -n "$latest" ]]; then
-             local res; res="$(resolve_standard_strategy "stable" "$latest")"
-             [[ -n "$res" ]] && add_to_queue "stable" "$res"
-           else
-             echo "::error::No stable tag found for $UNI_KIND" >&2; exit 1
-           fi
-        else
-           # Specific versions
-           IFS=',' read -ra vers <<< "$IN_VERSION"
-           for raw in "${vers[@]}"; do
-             raw="$(echo "$raw" | xargs)"
-             [[ -z "$raw" ]] && continue
-             check_github_tag_exists "$raw"
-             local res; res="$(resolve_standard_strategy "stable" "$raw")"
-             [[ -n "$res" ]] && add_to_queue "stable" "$res"
-           done
+        local requested_versions="${IN_VERSION:-}"
+        if [[ -z "$requested_versions" ]] && default_versions_for_kind "$UNI_KIND" >/dev/null 2>&1; then
+          requested_versions="$(default_versions_for_kind "$UNI_KIND")"
         fi
+
+        if [[ -z "$requested_versions" ]]; then
+          requested_versions="latest"
+        fi
+
+        queue_stable_versions "$requested_versions"
     elif [[ "$IN_CHANNEL" == "nightly" ]]; then
         [[ "$has_nightly" != "true" ]] && { echo "::error::Nightly not supported"; exit 1; }
         local res; res="$(resolve_standard_strategy "nightly" "")"

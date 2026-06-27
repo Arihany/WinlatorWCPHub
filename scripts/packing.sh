@@ -1,5 +1,3 @@
-#  /\_/\
-# (=•ᆽ•=)づ📦
 set -Eeuo pipefail
 shopt -s nullglob
 
@@ -87,8 +85,9 @@ pack_wcp_archive() {
 
   mkdir -p "$(dirname "$out_file")"
   
-  echo "Packing WCP: $out_file"
-  tar --zstd -C "$src_dir" \
+  echo "Packing WCP: $out_file (zstd -22 --ultra)"
+  tar -C "$src_dir" \
+    --use-compress-program='zstd -22 --ultra' \
     --format=gnu --owner=0 --group=0 --numeric-owner "${TAR_SORT_OPT[@]}" \
     -cf "$out_file" "${contents[@]}"
 }
@@ -135,7 +134,13 @@ if [[ -n "${WCP_SINGLE_BIN_SOURCE:-}" ]]; then
   chmod u+w "$WCP_DIR/$BIN_NAME" 2>/dev/null || true
 
   if [[ "$HAVE_LLVM_STRIP" -eq 1 ]]; then
-    llvm-strip --strip-unneeded "$WCP_DIR/$BIN_NAME" 2>/dev/null || true
+    # DLLs get the same aggressive strip as the graphics path; PE exports live
+    # in the export directory, not the symbol table, so --strip-all is safe.
+    if [[ "${BIN_NAME,,}" == *.dll ]]; then
+      llvm-strip --strip-all "$WCP_DIR/$BIN_NAME" 2>/dev/null || true
+    else
+      llvm-strip --strip-unneeded "$WCP_DIR/$BIN_NAME" 2>/dev/null || true
+    fi
   else
     echo "Skipping strip for $BIN_NAME (llvm-strip not available)."
   fi
