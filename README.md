@@ -74,7 +74,7 @@
 | [**`DXVK-sarek`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/DXVK-SAREK-ASYNC-ARM64EC) | <!--sarek--> `1.12.0`| <a href="https://github.com/pythonlover02/DXVK-Sarek/releases">🔗</a> |
 | [**`VKD3D-proton`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON) [**`arm64ec`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/VKD3D-PROTON-ARM64EC) | <!--vkd3d--> `3.0.1`|<a href="https://github.com/HansKristian-Work/vkd3d-proton/releases">🔗</a> |
 
-- DXVK `2.5.x` and later may show reduced performance when used with the `Turnip driver`.
+- DXVK `2.5` and later may show reduced performance when used with the `Turnip driver`.
 
 <details>
   <summary>💡Quick Info</summary>
