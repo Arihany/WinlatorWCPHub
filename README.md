@@ -10,6 +10,7 @@
 > 2026/06/27
 > - Assets have been refreshed.
 > - binsem assets have been added.
+> - Proton 11 Beta 5 with several bug fixes. Updates will be irregular.
 > - ARM64EC (and Fexcore) assets now use Valve-style build flags for better performance, though compatibility may be reduced.
 > - FEX Nightly and Box64 are no longer maintained.
 
