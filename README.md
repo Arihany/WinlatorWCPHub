@@ -12,7 +12,7 @@
 > - binsem assets have been added.
 > - [**Proton 11 Beta 5**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WINE) with several bug fixes. Updates will be irregular.
 > - ARM64EC (and Fexcore) assets now use Valve-style build flags for better performance, though compatibility may be reduced.
-> - FEX Nightly and Box64 are no longer maintained.
+> - FEX Nightly and Box64 are no longer maintained because they are no longer part of my regular testing path.
 
 
 > [!TIP]
