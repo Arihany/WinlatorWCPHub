@@ -115,7 +115,7 @@ dxvk_binsem_supported_base() {
   local first
 
   [[ "$base" =~ ^[0-9]+(\.[0-9]+)*$ ]] || return 1
-  first="$(printf '%s\n%s\n' "$DXVK_BINSEM_MIN_VERSION" "$base" | sort -V | head -n1)"
+  first="$(printf '%s\n%s\n' "$DXVK_BINSEM_MIN_VERSION" "$base" | sort -V | head -n1 || true)"
   [[ "$first" == "$DXVK_BINSEM_MIN_VERSION" ]]
 }
 

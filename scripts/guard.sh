@@ -306,7 +306,7 @@ resolve_gplasync_strategy() {
         grep -E '^v[0-9]+\.[0-9]+(\.[0-9]+)?-[0-9]+$' "$tags_file" \
           | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
           | sort -k1,1V -k2,2n \
-          | tail -n1
+          | tail -n1 || true
       )"
     elif [[ "$req" =~ ^v?([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$ ]]; then
       base="${BASH_REMATCH[1]}"
@@ -322,7 +322,7 @@ resolve_gplasync_strategy() {
         grep -E "^v${base}-[0-9]+$" "$tags_file" \
           | sed -E 's/^v([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)$/\1 \3/' \
           | sort -k1,1V -k2,2n \
-          | tail -n1
+          | tail -n1 || true
       )"
       if [[ -z "$tag_line" ]]; then
         echo "::warning::No GPLAsync tag found for DXVK ${base}; skipping." >&2
