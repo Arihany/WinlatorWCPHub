@@ -9,11 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(e.g. v2.4, v2.5.1). Empty = latest"
-      force:
-        type: boolean
-        default: false
-        description: "Force build v2.4.1 pre-reg only"
+        description: "(e.g. 2.4.1-pre-reg, 2.4.1, 3.0, latest). Empty = presets + latest"
 
   schedule:
     - cron: "0 17 * * *"
@@ -45,8 +41,8 @@ jobs:
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
       IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
-      missing:     ${{ steps.override.outputs.missing || steps.check.outputs.missing }}
-      list:        ${{ steps.override.outputs.list    || steps.check.outputs.list    }}
+      missing:     ${{ steps.check.outputs.missing }}
+      list:        ${{ steps.check.outputs.list }}
     steps:
 
       - name: Checkout
@@ -54,14 +50,8 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Force Build
-        id: override
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.force == true }}
-        run: bash ./scripts/forcebuild/dxvk-241-pr.sh
-
       - name: Check Upstream & Queue
         id: check
-        if: ${{ ! (github.event_name == 'workflow_dispatch' && inputs.force == true) }}
         run: bash ./scripts/guard.sh
 
   build:
@@ -93,7 +83,7 @@ jobs:
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
         run: |
-          mkdir -p _logs out src/out
+          mkdir -p out src/out
 
           cd src
           git fetch --tags --force
@@ -105,9 +95,6 @@ jobs:
               echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
               continue
             fi
-
-            LOG_PATH="../_logs/${UNI_KIND}-${ver_name}-build.log"
-
             {
               echo "::group::Building ${ref} (${ver_name})"
 
@@ -117,7 +104,17 @@ jobs:
               git submodule sync --recursive
               git submodule update --init --recursive
 
+              BINSEM=false
+              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh"
+              if [[ "$filename" == *-binsem.wcp ]]; then
+                BINSEM=true
+                PROFILE_SH="../scripts/profiles/${UNI_KIND}-binsem.sh"
+              fi
+
               bash ../scripts/patches/dxvk.sh .
+              if $BINSEM; then
+                patch -p1 < ../scripts/patches/dxvk_binsem.patch
+              fi
 
               git config --global --add safe.directory "$(pwd)"
               if ! git diff-index --quiet HEAD --; then
@@ -126,31 +123,22 @@ jobs:
               fi
 
               NEW_TAG="${ref}-arm64ec"
-              echo "Modifying tag: $ref -> $NEW_TAG"
-              git tag -d "$ref" 2>/dev/null || true
+              if $BINSEM; then
+                NEW_TAG="${NEW_TAG}-binsem"
+              fi
+              echo "Adding ARM64EC tag: $NEW_TAG"
               git tag -a -f "$NEW_TAG" -m "ARM64EC-Build"
 
+              PROFILE_SH="$PROFILE_SH" \
               bash ../scripts/guts-arm64ec.sh \
                 "$ref" \
                 "$ver_name" \
                 "$filename"
             
               echo "::endgroup::"
-            } 2>&1 | tee "$LOG_PATH"
+            }
 
           done <<< "$TO_BUILD"
-
-      - name: Process Logs
-        if: always()
-        run: bash ./scripts/log.sh _logs/*.log
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.REL_TAG_STABLE }}-logs
-          path: _logs/
-
       - name: Release
         env:
           REPO:           ${{ github.repository }}
@@ -158,9 +146,10 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: arm64ec (system32) + x86 (syswow64)
             - For FEX only
+            - Common: Built with Valve-style ARM64EC build flags. Compatibility may be reduced.
             - pre-reg: Last version before the performance drop on Turnip driver
+            - binsem: Avoids Turnip performance loss without env vars. May be unstable.
         run: bash ./scripts/release.sh
 
   maintenance:

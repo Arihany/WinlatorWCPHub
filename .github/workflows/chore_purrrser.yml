@@ -30,6 +30,7 @@ jobs:
       REPO: ${{ github.repository }}
       README_FILE: README.md
       PACK_FILE: pack.json
+      CASKADE_FILE: pack-caskade.json
 
     steps:
       - name: Checkout default branch
@@ -63,11 +64,16 @@ jobs:
 
       - name: Generate
         run: |
-          chmod +x scripts/gen-pack.sh
+          chmod +x scripts/gen-pack.sh scripts/gen-caskade.sh
           scripts/gen-pack.sh "${REPO}" "${PACK_FILE}"
           test -f "${PACK_FILE}"
           echo "Generated ${PACK_FILE}:"
           head -n 50 "${PACK_FILE}" || true
+
+          scripts/gen-caskade.sh "${PACK_FILE}" "${CASKADE_FILE}"
+          test -f "${CASKADE_FILE}"
+          echo "Generated ${CASKADE_FILE}:"
+          head -n 50 "${CASKADE_FILE}" || true
 
       - name: update readme
         id: readme
@@ -80,7 +86,7 @@ jobs:
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add "$PACK_FILE" "$README_FILE" || true
+          git add "$PACK_FILE" "$CASKADE_FILE" "$README_FILE" || true
 
           if git diff --cached --quiet; then
             echo "No changes to commit."

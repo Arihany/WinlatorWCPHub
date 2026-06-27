@@ -84,7 +84,7 @@ jobs:
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
         run: |
-          mkdir -p _logs out src/out
+          mkdir -p out src/out
 
           cd src
           git fetch origin "$UPSTREAM_BRANCH" --force
@@ -97,9 +97,6 @@ jobs:
               echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
               continue
             fi
-
-            LOG_PATH="../_logs/${UNI_KIND}-${ver_name}-build.log"
-
             {
               echo "::group::Building ${ref} (${ver_name})"
 
@@ -131,21 +128,9 @@ jobs:
                 "$filename"
             
               echo "::endgroup::"
-            } 2>&1 | tee "$LOG_PATH"
+            }
 
           done <<< "$TO_BUILD"
-
-      - name: Process Logs
-        if: always()
-        run: bash ./scripts/log.sh _logs/*.log
-
-      - name: Upload logs
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ env.REL_TAG_STABLE }}-logs
-          path: _logs/
-
       - name: Release
         env:
           REPO:           ${{ github.repository }}
@@ -153,10 +138,9 @@ jobs:
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
-            - Architecture: arm64ec (system32) + x86 (syswow64)
             - For FEX only
+            - Common: Uses Valve-style build flags to improve performance. Compatibility may be reduced.
             - Dyasync can be disabled by `DXVK_DISABLE_DYASYNC=1`
-            - ddraw.dll has been excluded
         run: bash ./scripts/release.sh
 
   maintenance:
