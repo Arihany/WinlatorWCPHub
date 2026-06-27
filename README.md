@@ -6,6 +6,14 @@
 
 ---
 
+> [!NOTE]
+> 2026/06/27
+> - Assets have been refreshed.
+> - binsem assets have been added.
+> - ARM64EC (and Fexcore) assets now use Valve-style build flags for better performance, though compatibility may be reduced.
+> - FEX Nightly and Box64 are no longer maintained.
+
+
 > [!TIP]
 > <details>
 >  <summary><b>What does this hub do?</b></summary><br>
@@ -50,64 +58,7 @@
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
-| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore-Nightly) | <!--fex--> `2605`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
-| Box64-Bionic | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/BOX64-BIONIC-NIGHTLY) | <!--box64--> `0.4.2` `0.4.3`| <a href="https://github.com/ptitSeb/box64/releases">🔗</a> |
-| WOWBox64 | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64) [**`Nightly`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WOWBOX64-NIGHTLY) | <!--box64--> `0.4.2` `0.4.3`| |
-
-<details>
-<summary>💡Quick Info</summary>
-<br>
-
-| Type | 📖 |
-|:-:|-|
-| **FEXCore** | Prioritizes accuracy. On modern setups it can give you very good compatibility without too much fuss. |
-| **Box64** | Aimed at practical performance rather than perfect accuracy. Its dynarec has plenty of room for tuning, so you can adjust it per game when something starts acting weird. |
-| **WOWBox64** | Helps 32-bit Windows games run inside 64-bit Wine by bridging their old 32-bit calls to the 64-bit host. |
-
-- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN` `BOX64_FASTROUND` `BOX64_X87DOUBLE` `FEX_X87REDUCEDPRECISION`
-
----
-
-</details>
-
-<details>
-<summary>🧐 <b>UNITY SETTINGS</b></summary>
-
----
-
-### 🧠 Unity scripting backends
-
-| Backend | 🔍 | 🫩 | 📖 |
-|:-:|:-:|:-:|-|
-| **Old Mono** | `UnityEngine.dll` | ❌ | Very cumbersome, and even when it runs the performance drop is severe. |
-| **Mono** | `Assembly-CSharp.dll` `/MonoBleedingEdge` | 🟡 | Used by most Unity games. Performance varies, but it generally runs. |
-| **IL2CPP** | `GameAssembly.dll` | 🟢 | Performs well and tolerates more aggressive settings in most cases. |
-
-- You can identify each backend by the folders and files it is located in 🔍
-
----
-
-### ⚙️ General Modern Mono Settings
-
-| FEXCore | 🏷️ | 📖 |
-|:-:|:-:|-|
-| **TSO** | `1` | Keep as is. |
-| **MEMCPYSETTSO** | `0` | If you still get crashes/freezes with `TSO = 1`, set this to `1`. | 
-| **VECTORTSO** | `0` | If you still get crashes/freezes with `TSO = 1` `MEMCPYSETTSO = 1`, set this to `1`. Very heavy. |
-| **HALFBARRIERTSO** | `1` | Keep as is. |
-| **MULTIBLOCK** | `0` | Once TSO-related settings are stable, you can try `1` for potential performance gains. |
-
-| Box64 | 🏷️ | 📖 |
-|:-:|:-:|-|
-| **SAFEFLAGS** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
-| **STRONGMEM** | `1` | If you still get crashes/freezes, set this to `2`. Very heavy. |
-| **WEAKBARRIER** | `1` | Reduces the performance cost of `STRONGMEM`. Set to `0` if the game crashes. |
-| **BIGBLOCK** | `0-2` | Official recommendation is `0`, but `2` often works fine in practice. |
-| **FORWARD** | `128-256` | Higher values mainly increase the risk of subtle, unpredictable side effects. |
-| **CALLRET** | `0` | Keep as is. |
-| **WAIT** | `1` | `0` might help performance in heavily multithreaded or JIT-heavy workloads. |
-
-- If you see graphics/animation/physics glitches in older games, try experimenting with `BOX64_FASTNAN` `BOX64_FASTROUND` `BOX64_X87DOUBLE` `FEX_X87REDUCEDPRECISION`
+| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) | <!--fex--> `2605`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
 
 </details>
 
