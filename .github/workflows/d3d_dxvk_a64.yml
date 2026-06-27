@@ -147,7 +147,7 @@ jobs:
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
           BODY: |
             - For FEX only
-            - Common: Built with Valve-style ARM64EC build flags. Compatibility may be reduced.
+            - Common: Uses Valve-style build flags to improve performance. Compatibility may be reduced.
             - pre-reg: Last version before the performance drop on Turnip driver
             - binsem: Avoids Turnip performance loss without env vars. May be unstable.
         run: bash ./scripts/release.sh
