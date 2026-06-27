@@ -1,5 +1,3 @@
-#  /\_/\ 
-# (=•ᆽ•=)づ✈
 set -Eeuo pipefail
 IFS=$'\n\t'
 
@@ -34,6 +32,7 @@ if [[ -n "$VERSION_PREFIX" ]]; then
   ver="${ver#"$VERSION_PREFIX"}"
 fi
 ver="${ver%.wcp}"
+ver="${ver%-binsem}"
 
 line="- Current version: $ver"
 
