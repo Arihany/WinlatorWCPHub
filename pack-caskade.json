@@ -97,6 +97,18 @@
   },
   {
     "type": "DXVK",
+    "verName": "3.0-1-gplasync-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-3.0-1.wcp"
+  },
+  {
+    "type": "DXVK",
+    "verName": "3.0-1-gplasync-arm64ec-binsem",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-3.0-1-binsem.wcp"
+  },
+  {
+    "type": "DXVK",
     "verName": "3.0-arm64ec",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-3.0.wcp"
