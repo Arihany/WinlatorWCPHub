@@ -1,0 +1,113 @@
+#  /\_/\ 
+# (=•ᆽ•=)づ🔧
+name: chore-purrrser
+
+on:
+  workflow_dispatch:
+  workflow_call:
+  release:
+    types: [published, edited]
+  repository_dispatch:
+    types: [regen_pack_json]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: maintenance-${{ github.repository }}-default-branch
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash --noprofile --norc -Eeuo pipefail {0}
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      README_FILE: README.md
+      PACK_FILE: pack.json
+      CASKADE_FILE: pack-caskade.json
+
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: branch
+        run: |
+          TARGET_BRANCH="${{ github.event.repository.default_branch }}"
+          [ -n "$TARGET_BRANCH" ] || TARGET_BRANCH="main"
+          echo "TARGET_BRANCH=$TARGET_BRANCH" >> "$GITHUB_ENV"
+
+          git fetch origin "$TARGET_BRANCH"
+          git checkout -B "$TARGET_BRANCH" "origin/$TARGET_BRANCH"
+          git reset --hard "origin/$TARGET_BRANCH"
+
+          echo "Using branch: $TARGET_BRANCH"
+          git --no-pager log -1 --oneline
+
+      - name: tools
+        run: |
+          sudo apt-get -yqq update
+          sudo apt-get -yqq install --no-install-recommends jq perl
+
+          if ! command -v gh >/dev/null 2>&1; then
+            echo "::error::gh (GitHub CLI) not found on runner."
+            exit 1
+          fi
+
+      - name: Generate
+        run: |
+          chmod +x scripts/gen-pack.sh scripts/gen-caskade.sh
+          scripts/gen-pack.sh "${REPO}" "${PACK_FILE}"
+          test -f "${PACK_FILE}"
+          echo "Generated ${PACK_FILE}:"
+          head -n 50 "${PACK_FILE}" || true
+
+          scripts/gen-caskade.sh "${PACK_FILE}" "${CASKADE_FILE}"
+          test -f "${CASKADE_FILE}"
+          echo "Generated ${CASKADE_FILE}:"
+          head -n 50 "${CASKADE_FILE}" || true
+
+      - name: update readme
+        id: readme
+        run: |
+          chmod +x scripts/chore.sh
+          scripts/chore.sh "${REPO}" "${README_FILE}"
+
+      - name: commit
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "$PACK_FILE" "$CASKADE_FILE" "$README_FILE" || true
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+
+          git commit -m "Refresh 😺"
+
+          for attempt in 1 2 3; do
+            if git push origin "HEAD:${TARGET_BRANCH}"; then
+              exit 0
+            fi
+
+            echo "::warning::Push rejected (remote moved). Rebasing and retrying... (${attempt}/3)"
+            git fetch origin "${TARGET_BRANCH}"
+            git rebase "origin/${TARGET_BRANCH}" || {
+              echo "::error::Rebase failed (conflict)."
+              git rebase --abort 2>/dev/null || true
+              exit 1
+            }
+          done
+
+          echo "::error::Failed to push after retries."
+          exit 1

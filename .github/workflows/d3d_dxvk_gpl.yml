@@ -1,0 +1,221 @@
+name: d3d-dxvk-gplasync
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "(e.g. 2.4.1-1-pre-reg, 2.4.1, 2.7.1-1, latest). Empty = presets + latest"
+
+  schedule:
+    - cron: "0 17 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN:       ${{ github.token }}
+  UNI_KIND:       dxvk-gplasync
+  REL_TAG_STABLE: DXVK-GPLASYNC
+  UPSTREAM_REPO:  doitsujin/dxvk
+  GITLAB_REPO:    Ph42oN/dxvk-gplasync
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  guard:
+    name: Build Guard
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    env:
+      IN_CHANNEL:  stable
+      IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+    outputs:
+      missing:     ${{ steps.check.outputs.missing }}
+      list:        ${{ steps.check.outputs.list }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check Upstream & Queue
+        id: check
+        run: bash ./scripts/guard.sh
+
+  build:
+    name: Build & Pack
+    needs: guard
+    if: needs.guard.outputs.missing == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    env:
+      GPLASYNC_BASE_URL: https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Deps
+        run: bash ./scripts/install-deps-ubuntu.sh
+
+      - name: Setup Build Env (Meson + llvm-mingw)
+        run: bash ./scripts/setup-llvm-meson.sh
+
+      - name: Clone Source
+        run: |
+          git clone "https://github.com/$UPSTREAM_REPO.git" src
+          git -C src config user.name "Builder"
+          git -C src config user.email "bot@noreply"
+
+      - name: Build Loop
+        env:
+          TO_BUILD: ${{ needs.guard.outputs.list }}
+        run: |
+          mkdir -p out src/out patches
+
+          cd src
+          git fetch --tags --force
+
+          while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
+            [[ -n "$kind" ]] || continue
+
+            if [[ -z "$ref" ]]; then
+              echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
+              continue
+            fi
+
+            DXVK_BASE=""
+            GPL_REV=""
+            VARIANT=""
+
+            if [[ "$ver_name" =~ ^([0-9]+\.[0-9]+(\.[0-9]+)?)-([0-9]+)(-(.+))?$ ]]; then
+              DXVK_BASE="${BASH_REMATCH[1]}"
+              GPL_REV="${BASH_REMATCH[3]}"
+              VARIANT="${BASH_REMATCH[5]:-}"
+            else
+              echo "::error::Unparseable ver_name: '$ver_name'" >&2
+              exit 1
+            fi
+            
+            GPL_TAG="${ref}"
+            BINSEM=false
+            DIRTY_SUFFIX="gplasync"
+            PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh"
+            if [[ "$filename" == *-binsem.wcp ]]; then
+              BINSEM=true
+              DIRTY_SUFFIX="${DIRTY_SUFFIX}-binsem"
+              PROFILE_SH="../scripts/profiles/${UNI_KIND}-binsem.sh"
+            fi
+            
+            if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
+              DXVK_REF="$ref"
+            else
+              DXVK_REF="v${DXVK_BASE}"
+            fi
+            {
+              echo "::group::Building ${GPL_TAG} (dxvk ${DXVK_REF}, rev ${GPL_REV})"
+
+              git reset --hard
+              git clean -fdx
+              git checkout -f "$DXVK_REF"
+              git submodule sync --recursive
+              git submodule update --init --recursive
+
+              bash ../scripts/patches/dxvk.sh .
+
+              if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" && "$VARIANT" == "pre-reg" ]]; then
+                PATCH_NAME="dxvk-gplasync-2.4.1-1-pre-reg.patch"
+                PATCH_LOCAL="../patches/${PATCH_NAME}"
+                cp "../scripts/patches/${PATCH_NAME}" "${PATCH_LOCAL}"
+                echo "Using local pre-regression GPLAsync patch: ${PATCH_LOCAL}"
+              else
+                PATCH_NAME="dxvk-gplasync-${DXVK_BASE}-${GPL_REV}.patch"
+                PATCH_LOCAL="../patches/${PATCH_NAME}"
+
+                echo "Downloading GPLAsync patch: ${PATCH_NAME}"
+
+                if ! curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"; then
+                  if [[ "$DXVK_BASE" == "2.4.1" && "$GPL_REV" == "1" ]]; then
+                    echo "::warning::Primary GPLAsync patch '${PATCH_NAME}' not found, falling back to 'dxvk-gplasync-2.4-1.patch' for 2.4.1-1" >&2
+
+                    PATCH_NAME="dxvk-gplasync-2.4-1.patch"
+                    PATCH_LOCAL="../patches/${PATCH_NAME}"
+
+                    echo "Downloading fallback GPLAsync patch: ${PATCH_NAME}"
+                    if ! curl -fsSL "${GPLASYNC_BASE_URL}/${PATCH_NAME}" -o "${PATCH_LOCAL}"; then
+                      echo "::warning::GPLAsync patch not found for ${DXVK_BASE}-${GPL_REV}; skipping." >&2
+                      echo "::endgroup::"
+                      continue
+                    fi
+                  else
+                    echo "::warning::GPLAsync patch not found for ${DXVK_BASE}-${GPL_REV}; skipping." >&2
+                    echo "::endgroup::"
+                    continue
+                  fi
+                fi
+              fi
+
+              sed -i "s/--dirty=-[^']*gplasync'/--dirty=-${DIRTY_SUFFIX}'/g" "$PATCH_LOCAL" || true
+
+              patch -p1 < "${PATCH_LOCAL}"
+              if $BINSEM; then
+                patch -p1 < ../scripts/patches/dxvk_binsem.patch
+              fi
+
+              ../.venv/bin/meson --version || true
+
+              PKG_ROOT="../pkg_temp"
+              rm -rf "${PKG_ROOT}"
+              mkdir -p "${PKG_ROOT}"
+
+              PKG_VERSION="gplasync-${GPL_TAG}"
+
+              ./package-release.sh "${PKG_VERSION}" "$PKG_ROOT" --no-package
+
+              SRC_ROOT="${PKG_ROOT}/dxvk-${PKG_VERSION}"
+              bash ../scripts/pack-release-tree.sh \
+                "$SRC_ROOT" \
+                "../${REL_TAG_STABLE}_WCP" \
+                "$ver_name" \
+                "../out/${filename}" \
+                "$PROFILE_SH"
+
+              echo "::endgroup::"
+            }
+
+          done <<< "$TO_BUILD"
+      - name: Release
+        env:
+          REPO:           ${{ github.repository }}
+          REL_TAG:        ${{ env.REL_TAG_STABLE }} 
+          VERSION_PREFIX: "${{ env.UNI_KIND }}-"
+          ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
+          BODY: |
+            - General-purpose x64/x86 build
+            - pre-reg: Last version before the performance drop on Turnip driver
+            - binsem: Avoids Turnip performance loss without env vars. May be unstable.
+        run: bash ./scripts/release.sh
+
+  maintenance:
+    name: Refresh pack.json + README
+    needs: build
+    if: needs.build.result == 'success'
+    uses: ./.github/workflows/chore_purrrser.yml
+    secrets: inherit
+    permissions:
+      contents: write

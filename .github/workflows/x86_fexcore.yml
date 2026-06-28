@@ -1,0 +1,210 @@
+name: x86-fexcore
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "(e.g. 'FEX-2605, 2605'). Empty = presets (2605) + latest stable"
+
+  schedule:
+    - cron: "0 17 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN:        ${{ github.token }}
+  UNI_KIND:        fexcore
+  REL_TAG_STABLE:  FEXCore
+  UPSTREAM_REPO:   FEX-Emu/FEX
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  guard:
+    name: Build Guard
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    env:
+      IN_CHANNEL:  stable
+      IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+    outputs:
+      missing: ${{ steps.check.outputs.missing }}
+      matrix:  ${{ steps.matrix.outputs.matrix }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check Upstream & Queue
+        id: check
+        run: |
+          if [[ -n "${IN_VERSION:-}" ]]; then
+            IN_VERSION="${IN_VERSION// /,}"
+            export IN_VERSION
+          fi
+
+          bash ./scripts/guard.sh
+
+      - name: Build matrix from queue
+        id: matrix
+        env:
+          ROWS:    ${{ steps.check.outputs.list }}
+          MISSING: ${{ steps.check.outputs.missing }}
+        run: bash ./scripts/guard-matrix.sh
+
+  build:
+    name: Build ${{ format('{0} ({1})', matrix.rel_tag, matrix.ver_name) }}
+    needs: guard
+    if: needs.guard.outputs.missing == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.guard.outputs.matrix) }}
+    env:
+      REF:           ${{ matrix.ref }}
+      FILENAME:      ${{ matrix.filename }}
+      VER_NAME:      ${{ matrix.ver_name }}
+      REL_TAG:       ${{ matrix.rel_tag }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Deps
+        run: bash ./scripts/install-deps-ubuntu.sh
+
+      - name: Setup Build Env
+        run: bash ./scripts/setup-llvm-meson.sh
+
+      - name: Checkout Source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ env.UPSTREAM_REPO }}
+          ref:        ${{ env.REF }}
+          path: src
+          fetch-depth: 1
+
+      - name: Sync & update submodules
+        working-directory: src
+        run: |
+          git submodule sync --recursive
+          git submodule update --init --recursive --depth 1
+
+      - name: Build
+        run: |
+          source ./scripts/arm64ec-common.sh
+
+          mkdir -p artifacts
+          {
+            echo "::group::Building ${REF} (${VER_NAME})"
+
+            rm -rf build pkg stage-ec stage-wo stage-wcp
+            mkdir -p pkg
+
+            cd src
+
+            build_arch() {
+              local triple="$1"
+              local dest="$2"
+              local build_dir="build-${triple}"
+              local arch_flags
+              arch_flags="$(arm64ec_cpu_flags)"
+
+              rm -rf "$build_dir"
+              mkdir "$build_dir"
+              cd "$build_dir"
+
+              cmake -GNinja -Wno-dev \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_TOOLCHAIN_FILE=../Data/CMake/toolchain_mingw.cmake \
+                -DCMAKE_C_FLAGS="${arch_flags}" \
+                -DCMAKE_CXX_FLAGS="${arch_flags}" \
+                -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-windows \
+                -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
+                -DENABLE_LTO=False \
+                -DTUNE_CPU=none \
+                -DMINGW_TRIPLE="${triple}-w64-mingw32" \
+                -DBUILD_TESTING=False \
+                -DCMAKE_INSTALL_PREFIX=/usr ..
+
+              ninja
+              DESTDIR="$dest" ninja install
+              cd ..
+            }
+
+            build_arch "arm64ec" "../../stage-ec"
+            build_arch "aarch64" "../../stage-wo"
+
+            cd ..
+
+            STAGE_MERGE="stage-wcp"
+            WCP_DIR="pkg"
+
+            rm -rf "$STAGE_MERGE"
+            mkdir -p "$STAGE_MERGE"
+
+            for st in stage-ec stage-wo; do
+              if [[ -d "$st" ]]; then
+                echo "Collecting DLLs from $st"
+                find "$st" -type f -name '*.dll' -exec cp {} "$STAGE_MERGE/" \;
+              fi
+            done
+
+            if ! find "$STAGE_MERGE" -maxdepth 1 -type f -name '*.dll' | grep -q .; then
+              echo "::error::No DLLs found in merged stages (checked stage-ec/wo)"
+              exit 1
+            fi
+
+            sample_dll="$(find "$STAGE_MERGE" -maxdepth 1 -type f -name '*.dll' | head -n1)"
+            if [[ -n "$sample_dll" && "$(command -v llvm-readobj || true)" ]]; then
+              if ! llvm-readobj -h "$sample_dll" | grep -qE 'Machine:.*(ARM64|AARCH64)'; then
+                echo "::error::Merged DLL is not ARM64 / AARCH64"
+                exit 1
+              fi
+            fi
+
+            PROFILE_SH="./scripts/profiles/${UNI_KIND}.sh" \
+            bash ./scripts/packing.sh \
+              "$STAGE_MERGE" \
+              "-" \
+              "$WCP_DIR" \
+              "$VER_NAME" \
+              "artifacts/${FILENAME}"
+
+            echo "::endgroup::"
+          }
+      - name: Release
+        env:
+          REPO:           ${{ github.repository }}
+          ARTIFACT_GLOB:  "artifacts/${{ env.FILENAME }}"
+          VERSION_PREFIX: "FEXCore-" ###
+          BODY: |
+            - Common: Uses Valve-style build flags to improve performance. Compatibility may be reduced.
+        run: bash ./scripts/release.sh
+
+  maintenance:
+    name: Refresh pack.json + README
+    needs: build
+    if: needs.build.result == 'success'
+    uses: ./.github/workflows/chore_purrrser.yml
+    secrets: inherit
+    permissions:
+      contents: write

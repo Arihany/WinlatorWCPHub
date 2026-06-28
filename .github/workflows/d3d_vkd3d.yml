@@ -1,0 +1,144 @@
+name: d3d-vkd3d
+
+on:
+  workflow_dispatch:
+    inputs:
+      host:
+        type: boolean
+        default: false
+        description: "Self-hosted"
+      version:
+        type: string
+        description: "(e.g. 2.14.1, 3.0.1, latest). Empty = presets + latest"
+
+  schedule:
+    - cron: "0 17 * * *"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+env:
+  GH_TOKEN:       ${{ github.token }}
+  UNI_KIND:       vkd3d-proton
+  REL_TAG_STABLE: VKD3D-PROTON
+  UPSTREAM_REPO:  HansKristian-Work/vkd3d-proton
+
+defaults:
+  run:
+    shell: 'bash --noprofile --norc -Eeuo pipefail {0}'
+
+jobs:
+  guard:
+    name: Build Guard
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    env:
+      IN_CHANNEL:  stable
+      IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
+      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
+    outputs:
+      missing: ${{ steps.check.outputs.missing }}
+      list:    ${{ steps.check.outputs.list }}
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Check Upstream & Queue
+        id: check
+        run: bash ./scripts/guard.sh
+
+  build:
+    name: Build & Pack
+    needs: guard
+    if: needs.guard.outputs.missing == 'true'
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    timeout-minutes: 60
+    steps:
+
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Deps
+        run: bash ./scripts/install-deps-ubuntu.sh
+
+      - name: Setup Build Env (Meson + llvm-mingw)
+        run: bash ./scripts/setup-llvm-meson.sh
+
+      - name: Clone Source
+        run: |
+          git clone "https://github.com/$UPSTREAM_REPO.git" src
+          git -C src config user.name "Builder"
+          git -C src config user.email "bot@noreply"
+
+      - name: Build Loop
+        env:
+          TO_BUILD: ${{ needs.guard.outputs.list }}
+        run: |
+          mkdir -p out src/out
+
+          cd src
+          git fetch --tags --force
+
+          while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
+            [[ -n "$kind" ]] || continue
+
+            if [[ -z "$ref" ]]; then
+              echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
+              continue
+            fi
+            {
+              echo "::group::Building ${ref} (${ver_name})"
+
+              git reset --hard
+              git clean -fdx
+              git checkout -f "$ref"
+              git submodule sync --recursive
+              git submodule update --init --recursive
+
+              ../.venv/bin/meson --version || true
+
+              PKG_ROOT="../pkg_temp"
+              rm -rf "${PKG_ROOT}/${UNI_KIND}-${ref}"
+              mkdir -p "$PKG_ROOT"
+
+              ./package-release.sh "$ref" "$PKG_ROOT" --no-package
+
+              SRC_ROOT="${PKG_ROOT}/${UNI_KIND}-${ref}"
+              bash ../scripts/pack-release-tree.sh \
+                "$SRC_ROOT" \
+                "../${REL_TAG_STABLE}_WCP" \
+                "$ver_name" \
+                "../out/${filename}" \
+                "../scripts/profiles/${UNI_KIND}.sh"
+
+              echo "::endgroup::"
+            }
+
+          done <<< "$TO_BUILD"
+      - name: Release
+        env:
+          REPO:           ${{ github.repository }}
+          REL_TAG:        ${{ env.REL_TAG_STABLE }} 
+          VERSION_PREFIX: "${{ env.UNI_KIND }}-"
+          ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
+          BODY: |
+            - General-purpose x64/x86 build
+        run: bash ./scripts/release.sh
+
+  maintenance:
+    name: Refresh pack.json + README
+    needs: build
+    if: needs.build.result == 'success'
+    uses: ./.github/workflows/chore_purrrser.yml
+    secrets: inherit
+    permissions:
+      contents: write
