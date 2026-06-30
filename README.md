@@ -19,7 +19,7 @@
 > <details>
 >  <summary><b>What does this hub do?</b></summary><br>
 >
-> **Winlator WCP Hub** uses an open automated build pipeline to distribute essential `wcp` packages and provide simple, useful information about each type.
+> **Winlator WCP Hub** uses an open automated build pipeline to distribute essential `wcp(tzst)` packages and provide simple, useful information about each type.
 >
 > Honestly, I mostly made it for my own peace of mind. 😌
 >  
