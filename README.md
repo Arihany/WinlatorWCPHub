@@ -114,6 +114,7 @@ Box64 [ptitSeb](https://github.com/ptitSeb)<br>
 DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
 DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
 DXVK-GPLAsync Patch [Ph42oN](https://gitlab.com/Ph42oN)<br>
+DXVK-Binary Semaphore DxvkQueue fallback Patch [Lee Gao](https://github.com/leegao)<br>
 VKD3D [Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
 Freedreno Turnip driver [Mesa](https://mesa3d.org/)
 
