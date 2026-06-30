@@ -46,9 +46,7 @@
 > 
 > </details>
 > <br>
-> Updates daily at 17:00 UTC.
-> 
-> Add this URL in Settings to easily download all assets:
+>
 > ```
 > https://raw.githubusercontent.com/Arihany/WinlatorWCPHub/refs/heads/main/pack.json
 > ``` 
