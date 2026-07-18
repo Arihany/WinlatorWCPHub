@@ -270,6 +270,18 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-3.0.1-binsem.wcp"
   },
   {
+    "type": "DXVK",
+    "verName": "3.0.2",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-3.0.2.wcp"
+  },
+  {
+    "type": "DXVK",
+    "verName": "3.0.2-binsem",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-3.0.2-binsem.wcp"
+  },
+  {
     "type": "FEXCore",
     "verName": "2601",
     "verCode": "0",
