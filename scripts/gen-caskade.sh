@@ -7,13 +7,18 @@ command -v jq >/dev/null 2>&1 || { echo "Missing dependency: jq" >&2; exit 1; }
 [[ -f "$SRC" ]] || { echo "Source not found: $SRC" >&2; exit 1; }
 
 jq '
-  map(
-    (.remoteUrl | split("/")[-2]) as $tag
-    | select(
-        ($tag | test("(?i)-arm64ec$"))
-        or ($tag | test("(?i)^fexcore$"))
-      )
-  )
+  [
+    "fexcore",
+    "dxvk-gplasync-arm64ec",
+    "dxvk-gplasync",
+    "vkd3d-proton",
+    "vkd3d-proton-arm64ec",
+    "dxvk-sarek-async"
+  ] as $tags
+  | map(
+      (.remoteUrl | split("/")[-2] | ascii_downcase) as $tag
+      | select($tags | index($tag))
+    )
 ' "$SRC" > "$OUT"
 
 echo "Wrote: $OUT"
