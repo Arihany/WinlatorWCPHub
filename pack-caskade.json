@@ -150,6 +150,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2607.wcp"
   },
   {
+    "type": "FEXCore",
+    "verName": "2608",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2608.wcp"
+  },
+  {
     "type": "VKD3D",
     "verName": "2.14.1",
     "verCode": "0",

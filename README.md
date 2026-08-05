@@ -57,7 +57,7 @@
 
 | Type | 📦 | 🏷️ | 📜 |
 |:-:|:-:|:-:|:-:|
-| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) | <!--fex--> `2607`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
+| FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) | <!--fex--> `2608`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
 
 </details>
 
