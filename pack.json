@@ -337,9 +337,21 @@
   },
   {
     "type": "FEXCore",
+    "verName": "2607-unixlib",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-unixlib/FEXCore-unixlib-2607.wcp"
+  },
+  {
+    "type": "FEXCore",
     "verName": "2608",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore/FEXCore-2608.wcp"
+  },
+  {
+    "type": "FEXCore",
+    "verName": "2608-unixlib",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/FEXCore-unixlib/FEXCore-unixlib-2608.wcp"
   },
   {
     "type": "VKD3D",
