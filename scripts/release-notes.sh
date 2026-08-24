@@ -5,7 +5,7 @@ declare -A REL_NOTE=(
   [common]="- Common: Uses Valve-style build flags. Compatibility may be reduced."
   [prereg]="- pre-reg: Last version before the performance drop on Turnip driver."
   [binsem]="- binsem: Avoids Turnip performance loss without env vars. May be unstable."
-  [dyasync]="- Dyasync can be disabled by \`DXVK_DISABLE_DYASYNC=1\`"
+  [dyasync]="- For async control, please refer to the upstream release notes."
 )
 
 render_notes() {
