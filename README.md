@@ -7,9 +7,10 @@
 ---
 
 > [!NOTE]
-> 2026/06/27
+> 2026/08/28
 > - Assets have been refreshed.
-> - [**Proton 11**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WINE) with several bug fixes. Updates will be irregular.
+> - Added the DXVK bundled with Proton. (Just for fun)
+> - The binsem asset was removed because its effect was negligible.
 > - `FEX Nightly` and `Box64` are no longer maintained.
 
 
@@ -29,7 +30,7 @@
 >
 > ### Winlator-Bionic is a community fork based on [Pipetto-crypto](https://github.com/Pipetto-crypto)’s project.
 >
-> It runs closer to Android’s native stack, using a more direct Vulkan path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/arm64ec containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`.
+> It runs closer to Android’s native stack, using a more direct path that can cut overhead and improve performance on many devices. It supports both Box64 and FEXCore/arm64ec containers and lets users mix and match components such as Wine builds and graphics layers through modular `wcp`.
 > 
 > --- 
 >
@@ -57,6 +58,10 @@
 |:-:|:-:|:-:|:-:|
 | FEXCore | [**`Stable`**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/FEXCore) | <!--fex--> `2608`|<a href="https://github.com/FEX-Emu/FEX/releases">🔗</a> |
 
+<details>
+  <summary>💡Quick Info</summary>
+<br> 
+Keep TSO enabled unless you know exactly why you are disabling it 🐱
 </details>
 
 ---
@@ -78,9 +83,9 @@
 
 | Type | 📖 |
 |:-:|-|
-| **sarek**    | A modernized fork of DXVK `1.10.x` with backported fixes to keep older GPUs with weaker Vulkan support more stable. If you’re still on `1.10.x`, this is a good one to try. |
-| **gplasync** | `gpl` cache + `async` shader compilation to smooth out shader hitches and visible stutter. |
-| **arm64ec**  | Designed to be paired with `FEXCore` to cut down translation work and keep overhead lower. |
+| **sarek**    | A DXVK `1.10.x`-based fork for GPUs that cannot meet newer Vulkan requirements. Backports fixes, QoL changes, and game-specific configurations from newer DXVK releases. |
+| **gplasync** | Adds asynchronous pipeline compilation alongside DXVK's Graphics Pipeline Library, with optional state-cache integration. It can reduce shader compilation stutter, but the benefit may be smaller on newer DXVK versions and drivers where upstream GPL already handles most of this work. |
+| **arm64ec**  | ARM64EC build intended for use with `FEXCore`, allowing Wine/FEX to run more code through the ARM64EC path instead of relying entirely on x64 emulation, which can reduce translation overhead. |
   
 </details>
 
