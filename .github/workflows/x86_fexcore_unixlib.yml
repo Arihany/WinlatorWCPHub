@@ -1,4 +1,4 @@
-name: d3d-dxvk-sarek-async-arm64ec
+name: x86-fexcore-unixlib
 
 on:
   workflow_dispatch:
@@ -9,10 +9,10 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(v1.13.0 or newer) Empty = 1.13.0 + latest"
+        description: "(e.g. 'FEX-2607, 2607'). Empty = presets (2607) + latest stable. Ships the Android UnixLib SOs"
 
   schedule:
-    - cron: "0 17 * * *"
+    - cron: "0 18 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -23,10 +23,9 @@ permissions:
 
 env:
   GH_TOKEN:        ${{ github.token }}
-  UNI_KIND:        dxvk-sarek-dyasync-arm64ec
-  REL_TAG_STABLE:  DXVK-SAREK-ASYNC-ARM64EC
-  UPSTREAM_REPO:   pythonlover02/DXVK-Sarek
-  UPSTREAM_BRANCH: main
+  UNI_KIND:        fexcore-unixlib
+  REL_TAG_STABLE:  FEXCore-unixlib
+  UPSTREAM_REPO:   FEX-Emu/FEX
 
 defaults:
   run:
@@ -51,14 +50,20 @@ jobs:
 
       - name: Check Upstream & Queue
         id: check
-        run: bash ./scripts/guard.sh
+        run: |
+          if [[ -n "${IN_VERSION:-}" ]]; then
+            IN_VERSION="${IN_VERSION// /,}"
+            export IN_VERSION
+          fi
+
+          bash ./scripts/guard.sh
 
   build:
     name: Build & Pack
     needs: guard
     if: needs.guard.outputs.missing == 'true'
     runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
 
       - name: Checkout
@@ -69,20 +74,21 @@ jobs:
       - name: Install Deps
         run: bash ./scripts/install-deps-ubuntu.sh
 
-      - name: Setup Build Env (Meson + llvm-mingw)
+      - name: Setup Build Env (RootCellar llvm-mingw)
         run: bash ./scripts/setup-llvm-meson.sh
 
       - name: Build queued artifacts
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
         run: bash ./scripts/build-queue.sh
+
       - name: Release
         env:
           REPO:           ${{ github.repository }}
-          REL_TAG:        ${{ env.REL_TAG_STABLE }} 
-          VERSION_PREFIX: "${{ env.UNI_KIND }}-"
-          ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
-          BODY_KEYS: "fexonly common dyasync"
+          REL_TAG:        ${{ env.REL_TAG_STABLE }}
+          ARTIFACT_GLOB:  "out/FEXCore-unixlib-*.wcp"
+          VERSION_PREFIX: "FEXCore-unixlib-"
+          REL_SKIP_BODY:  "1"
         run: bash ./scripts/release.sh
 
   maintenance:

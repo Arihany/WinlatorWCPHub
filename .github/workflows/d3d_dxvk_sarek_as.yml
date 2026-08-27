@@ -9,7 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(v1.10.8, v1.11.0) Empty = Latest"
+        description: "(v1.13.0 or newer) Empty = 1.13.0 + latest"
 
   schedule:
     - cron: "0 17 * * *"
@@ -38,9 +38,7 @@ jobs:
     runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
     timeout-minutes: 5
     env:
-      IN_CHANNEL:  stable
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
-      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
       missing: ${{ steps.check.outputs.missing }}
       list:    ${{ steps.check.outputs.list }}
@@ -74,70 +72,10 @@ jobs:
       - name: Setup Build Env (Meson + llvm-mingw)
         run: bash ./scripts/setup-llvm-meson.sh
 
-      - name: Clone Source
-        run: |
-          git clone --branch "$UPSTREAM_BRANCH" --single-branch --recurse-submodules "https://github.com/$UPSTREAM_REPO.git" src
-          git -C src config user.name "Builder"
-          git -C src config user.email "bot@noreply"
-
-      - name: Build Loop
+      - name: Build queued artifacts
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
-        run: |
-          mkdir -p out src/out
-
-          cd src
-          git fetch origin "$UPSTREAM_BRANCH" --force
-          git fetch --tags --force
-
-          while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
-            [[ -n "$kind" ]] || continue
-
-            if [[ -z "$ref" ]]; then
-              echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
-              continue
-            fi
-            {
-              echo "::group::Building ${ref} (${ver_name})"
-
-              tag_sha="$(git rev-parse "$ref^{commit}")"
-              if ! git merge-base --is-ancestor "$tag_sha" "origin/$UPSTREAM_BRANCH"; then
-                echo "::error::Ref '$ref' ($tag_sha) is not contained in origin/$UPSTREAM_BRANCH" >&2
-                exit 1
-              fi
-              git checkout -f "$tag_sha"
-              
-              git clean -fdx
-              git submodule update --init --recursive
-
-              bash ../scripts/patches/dxvk.sh .
-
-              if [[ -f meson_options.txt ]]; then
-              sed -i "/option('enable_ddraw'/s/value : true/value : false/" meson_options.txt
-              fi
-
-              sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-dyasync"'"/' version.h.in
-
-              ../.venv/bin/meson --version || true
-
-              PKG_ROOT="../pkg_temp"
-              rm -rf "${PKG_ROOT}"
-              mkdir -p "${PKG_ROOT}"
-
-              ./package-release.sh "$ref" "$PKG_ROOT" --no-package
-
-              SRC_ROOT="${PKG_ROOT}/dxvk-${ref}"
-              bash ../scripts/pack-release-tree.sh \
-                "$SRC_ROOT" \
-                "../${REL_TAG_STABLE}_WCP" \
-                "$ver_name" \
-                "../out/${filename}" \
-                "../scripts/profiles/${UNI_KIND}.sh"
-
-              echo "::endgroup::"
-            }
-
-          done <<< "$TO_BUILD"
+        run: bash ./scripts/build-queue.sh
       - name: Release
         env:
           REPO:           ${{ github.repository }}

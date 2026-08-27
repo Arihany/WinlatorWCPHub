@@ -1,4 +1,6 @@
-name: d3d-dxvk-sarek-async-arm64ec
+# Pre-1.9 DXVK: no clang release compiles these, so they build with mingw-gcc.
+# Frozen upstream, so there is nothing for a schedule to find: dispatch only.
+name: d3d-dxvk-legacy
 
 on:
   workflow_dispatch:
@@ -9,10 +11,8 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(v1.13.0 or newer) Empty = 1.13.0 + latest"
+        description: "(e.g. 1.5.5, 1.7.2, 1.7.3). Empty = all three legacy presets"
 
-  schedule:
-    - cron: "0 17 * * *"
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -22,11 +22,10 @@ permissions:
   contents: write
 
 env:
-  GH_TOKEN:        ${{ github.token }}
-  UNI_KIND:        dxvk-sarek-dyasync-arm64ec
-  REL_TAG_STABLE:  DXVK-SAREK-ASYNC-ARM64EC
-  UPSTREAM_REPO:   pythonlover02/DXVK-Sarek
-  UPSTREAM_BRANCH: main
+  GH_TOKEN:       ${{ github.token }}
+  UNI_KIND:       dxvk-legacy
+  REL_TAG_STABLE: DXVK
+  UPSTREAM_REPO:  doitsujin/dxvk
 
 defaults:
   run:
@@ -40,8 +39,8 @@ jobs:
     env:
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
     outputs:
-      missing: ${{ steps.check.outputs.missing }}
-      list:    ${{ steps.check.outputs.list }}
+      missing:     ${{ steps.check.outputs.missing }}
+      list:        ${{ steps.check.outputs.list }}
     steps:
 
       - name: Checkout
@@ -69,7 +68,7 @@ jobs:
       - name: Install Deps
         run: bash ./scripts/install-deps-ubuntu.sh
 
-      - name: Setup Build Env (Meson + llvm-mingw)
+      - name: Setup Build Env (Meson + mingw-gcc)
         run: bash ./scripts/setup-llvm-meson.sh
 
       - name: Build queued artifacts
@@ -80,9 +79,9 @@ jobs:
         env:
           REPO:           ${{ github.repository }}
           REL_TAG:        ${{ env.REL_TAG_STABLE }} 
-          VERSION_PREFIX: "${{ env.UNI_KIND }}-"
-          ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
-          BODY_KEYS: "fexonly common dyasync"
+          VERSION_PREFIX: "dxvk-"
+          ARTIFACT_GLOB:  "out/dxvk-*.wcp"
+          BODY_KEYS: "general dxvk prereg proton"
         run: bash ./scripts/release.sh
 
   maintenance:

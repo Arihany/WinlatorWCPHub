@@ -20,6 +20,8 @@ infer_repo_from_git() {
 
 REPO="${1:-${GITHUB_REPOSITORY:-}}"
 OUT="${2:-content.json}"
+# Optional path for the unfiltered inventory
+FULL_OUT="${3:-}"
 
 if [[ -z "$REPO" ]]; then
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -43,8 +45,9 @@ elif [[ -n "${GITHUB_TOKEN:-}" ]]; then
 fi
 
 TMP_ITEMS="$(mktemp)"
+TMP_ALL="$(mktemp)"
 FILTER_FILE="$(mktemp)"
-trap 'rm -f "$TMP_ITEMS" "$FILTER_FILE"' EXIT
+trap 'rm -f "$TMP_ITEMS" "$TMP_ALL" "$FILTER_FILE"' EXIT
 
 cat > "$FILTER_FILE" <<'JQ'
 def strip_ext:
@@ -100,6 +103,7 @@ def mk($type; $re; $extra; $base):
 .[]?
 | .assets[]?
 | (.name | strip_ext) as $base
+| select(($base | test("(?i)(^|-)binsem($|-)")) | not)
 | if   ($base | test("(?i)^wine[-_]"))     then mk("Wine";     "(?i)^wine[-_]";     null;                 $base)
   elif ($base | test("(?i)^dxvk[-_]"))     then mk("DXVK";     "(?i)^dxvk[-_]";     "(?i)^sarek[-_]";     $base)
   elif ($base | test("(?i)^fexcore[-_]"))  then mk("FEXCore";  "(?i)^fexcore[-_]";  null;                 $base)
@@ -126,11 +130,21 @@ done
 
 if [[ ! -s "$TMP_ITEMS" ]]; then
   echo "[]" > "$OUT"
+  [[ -n "$FULL_OUT" ]] && echo "[]" > "$FULL_OUT"
   echo "No matching assets found. Wrote empty array to: $OUT" >&2
   exit 0
 fi
 
 jq -s 'sort_by(.remoteUrl) | unique_by(.remoteUrl) | sort_by(.type, .verName)' \
-  "$TMP_ITEMS" > "$OUT"
+  "$TMP_ITEMS" > "$TMP_ALL"
+
+if [[ -n "$FULL_OUT" ]]; then
+  cp -- "$TMP_ALL" "$FULL_OUT"
+  echo "Wrote: $FULL_OUT (complete inventory)"
+fi
+
+# The general list stays DLL-only
+jq 'map(select((.remoteUrl | test("/download/FEXCore-unixlib/")) | not))' \
+  "$TMP_ALL" > "$OUT"
 
 echo "Wrote: $OUT"

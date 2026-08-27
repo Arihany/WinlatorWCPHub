@@ -1,7 +1,7 @@
 set -Eeuo pipefail
 
 SRC_DIR="${1:-.}"
-TOOLCHAIN_DIR="${TOOLCHAIN_DIR:-/opt/llvm-mingw}"
+TOOLCHAIN_DIR="${TOOLCHAIN_DIR:?TOOLCHAIN_DIR must be selected by setup-build-env.sh}"
 
 cd "$SRC_DIR"
 
@@ -17,9 +17,9 @@ fi
 
 HAS_D3D10_STATEBLOCK=false
 if compgen -G "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d10*.h >/dev/null 2>&1; then
-  if grep -Rqs 'ID3D10StateBlock' "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d10* 2>/dev/null; then
+  if grep -Rqs '__CRT_UUID_DECL(ID3D10StateBlock' "$TOOLCHAIN_DIR"/*-w64-mingw32/include/d3d10* 2>/dev/null; then
     HAS_D3D10_STATEBLOCK=true
-    echo "::notice::Toolchain provides ID3D10StateBlock."
+    echo "::notice::Toolchain provides the ID3D10StateBlock UUID declaration."
   fi
 fi
 
@@ -27,15 +27,7 @@ INC="src/d3d9/d3d9_include.h"
 if [[ "$HAS_DEVINFO" == true && -f "$INC" ]]; then
   if grep -q 'typedef struct _D3DDEVINFO_RESOURCEMANAGER' "$INC"; then
     echo "Patching D3DDEVINFO_RESOURCEMANAGER in $INC..."
-    perl -i -0777 -pe 's/typedef\s+struct\s+_D3DDEVINFO_RESOURCEMANAGER\s*\{.*?\}\s*D3DDEVINFO_RESOURCEMANAGER[^;]*;//s' "$INC"
-  fi
-fi
-
-TEX="src/d3d11/d3d11_texture.h"
-if [[ -f "$TEX" ]]; then
-  if grep -q 'UnmappedSubresource' "$TEX"; then
-    echo "Patching UnmappedSubresource in $TEX..."
-    perl -i -pe 's/static\s+(?:constexpr\s+)?D3D11_MAP\s+UnmappedSubresource\s*=.*/inline static const D3D11_MAP UnmappedSubresource = static_cast<D3D11_MAP>(-1);/' "$TEX"
+    perl -i -0777 -pe 's/^\s*typedef\s+struct\s+_D3DDEVINFO_RESOURCEMANAGER\s*\{.*?\}\s*D3DDEVINFO_RESOURCEMANAGER[^;]*;//ms' "$INC"
   fi
 fi
 

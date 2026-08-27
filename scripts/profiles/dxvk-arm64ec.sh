@@ -30,5 +30,12 @@ wcp_version_name() {
     return 0
   fi
 
+  # Proton pin: <base>-protonN-<shorthash>. Keep the arch suffix next to <base>
+  # so this matches what gen-pack.sh's version_first derives for pack.json.
+  if [[ -n "$suffix" && "$v" =~ ^([^-]+)-(proton[0-9]+-.+)$ ]]; then
+    printf '%s\n' "${prefix}${BASH_REMATCH[1]}${suffix}-${BASH_REMATCH[2]}"
+    return 0
+  fi
+
   printf '%s\n' "${prefix}${v}${suffix}"
 }

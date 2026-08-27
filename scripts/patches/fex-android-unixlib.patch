@@ -1,0 +1,14 @@
+diff --git a/Source/Windows/UnixLib/CMakeLists.txt b/Source/Windows/UnixLib/CMakeLists.txt
+index 4f3375b7..3d535734 100644
+--- a/Source/Windows/UnixLib/CMakeLists.txt
++++ b/Source/Windows/UnixLib/CMakeLists.txt
+@@ -7,6 +7,8 @@ function(CreateLib TargetName LibName)
+   add_library(${TargetName} SHARED FEXUnixLib.cpp)
+   set_target_properties(${TargetName} PROPERTIES OUTPUT_NAME ${LibName} PREFIX "lib" SUFFIX ".so")
+-  target_link_libraries(${TargetName} PRIVATE rt)
++  if (NOT ANDROID)
++    target_link_libraries(${TargetName} PRIVATE rt)
++  endif()
+   install(TARGETS ${TargetName} LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR} COMPONENT Runtime)
+ endfunction()
+ 

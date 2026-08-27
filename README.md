@@ -9,10 +9,8 @@
 > [!NOTE]
 > 2026/06/27
 > - Assets have been refreshed.
-> - binsem assets have been added.
 > - [**Proton 11**](https://github.com/Arihany/WinlatorWCPHub/releases/tag/WINE) with several bug fixes. Updates will be irregular.
-> - ARM64EC (and Fexcore) assets now use Valve-style build flags for better performance, though compatibility may be reduced.
-> - `FEX Nightly` and `Box64` are no longer maintained because they are no longer part of my regular testing path.
+> - `FEX Nightly` and `Box64` are no longer maintained.
 
 
 > [!TIP]
@@ -27,7 +25,7 @@
 > 
 > </details>
 > <details>
->  <summary><b>What exactly is Winlator-Bionic?</b></summary><br>
+>  <summary><b>What exactly is Winlator *Bionic?</b></summary><br>
 >
 > ### Winlator-Bionic is a community fork based on [Pipetto-crypto](https://github.com/Pipetto-crypto)’s project.
 >
@@ -110,13 +108,9 @@ WCP packages redistribute unmodified (or minimally patched) binaries, and all co
 <br><br>
 
 FEX [FEX-Emu](https://github.com/FEX-Emu)<br>
-Box64 [ptitSeb](https://github.com/ptitSeb)<br>
 DXVK [Philip Rebohle](https://github.com/doitsujin)<br>
 DXVK-Sarek [pythonlover02](https://github.com/pythonlover02)<br>
 DXVK-GPLAsync Patch [Ph42oN](https://gitlab.com/Ph42oN)<br>
-DXVK-Binary Semaphore DxvkQueue fallback Patch [Lee Gao](https://github.com/leegao)<br>
 VKD3D [Hans-Kristian Arntzen](https://github.com/HansKristian-Work)<br>
-Freedreno Turnip driver [Mesa](https://mesa3d.org/)
 
 </h4>
-

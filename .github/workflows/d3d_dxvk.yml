@@ -9,7 +9,7 @@ on:
         description: "Self-hosted"
       version:
         type: string
-        description: "(e.g. 2.4.1-pre-reg, 2.4.1, 3.0, latest). Empty = presets + latest"
+        description: "(e.g. 1.9.4, 2.4.1, 3.0.2, proton, latest). Empty = presets + Proton pin + latest. Pre-1.9 lives in d3d-dxvk-legacy"
 
   schedule:
     - cron: "0 17 * * *"
@@ -37,9 +37,7 @@ jobs:
     runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
     timeout-minutes: 5
     env:
-      IN_CHANNEL:  stable
       IN_VERSION:  ${{ github.event_name == 'workflow_dispatch' && inputs.version || '' }}
-      IS_SCHEDULE: ${{ github.event_name == 'schedule' }}
     outputs:
       missing:     ${{ steps.check.outputs.missing }}
       list:        ${{ steps.check.outputs.list }}
@@ -73,85 +71,17 @@ jobs:
       - name: Setup Build Env (Meson + llvm-mingw)
         run: bash ./scripts/setup-llvm-meson.sh
 
-      - name: Clone Source
-        run: |
-          git clone "https://github.com/$UPSTREAM_REPO.git" src
-          git -C src config user.name "Builder"
-          git -C src config user.email "bot@noreply"
-
-      - name: Build Loop
+      - name: Build queued artifacts
         env:
           TO_BUILD: ${{ needs.guard.outputs.list }}
-        run: |
-          mkdir -p out src/out
-
-          cd src
-          git fetch --tags --force
-
-          while IFS='|' read -r kind channel ref ver_name rel_tag filename short; do
-            [[ -n "$kind" ]] || continue
-
-            if [[ -z "$ref" ]]; then
-              echo "::warning::Skipping queue line with empty ref (raw kind='$kind')" >&2
-              continue
-            fi
-            {
-              echo "::group::Building ${ref} (${ver_name})"
-
-              git reset --hard
-              git clean -fdx
-              git checkout -f "$ref"
-              git submodule sync --recursive
-              git submodule update --init --recursive
-
-              BINSEM=false
-              PROFILE_SH="../scripts/profiles/${UNI_KIND}.sh"
-              if [[ "$filename" == *-binsem.wcp ]]; then
-                BINSEM=true
-                PROFILE_SH="../scripts/profiles/${UNI_KIND}-binsem.sh"
-              fi
-
-              bash ../scripts/patches/dxvk.sh .
-              if $BINSEM; then
-                patch -p1 < ../scripts/patches/dxvk_binsem.patch
-              fi
-
-              git config --global --add safe.directory "$(pwd)"
-              if ! git diff-index --quiet HEAD --; then
-                git add -u
-                git commit -m "Apply CI patches for $ref"
-              fi
-
-              git tag -d "$ref" 2>/dev/null || true
-              git tag -a -f "$ref" -m "Clean Build"
-
-              ../.venv/bin/meson --version || true
-
-              PKG_ROOT="../pkg_temp"
-              rm -rf "${PKG_ROOT}/${UNI_KIND}-${ref}"
-              mkdir -p "$PKG_ROOT"
-
-              ./package-release.sh "$ref" "$PKG_ROOT" --no-package
-
-              SRC_ROOT="${PKG_ROOT}/${UNI_KIND}-${ref}"
-              bash ../scripts/pack-release-tree.sh \
-                "$SRC_ROOT" \
-                "../${REL_TAG_STABLE}_WCP" \
-                "$ver_name" \
-                "../out/${filename}" \
-                "$PROFILE_SH"
-
-              echo "::endgroup::"
-            }
-
-          done <<< "$TO_BUILD"
+        run: bash ./scripts/build-queue.sh
       - name: Release
         env:
           REPO:           ${{ github.repository }}
           REL_TAG:        ${{ env.REL_TAG_STABLE }} 
           VERSION_PREFIX: "${{ env.UNI_KIND }}-"
           ARTIFACT_GLOB:  "out/${{ env.UNI_KIND }}-*.wcp"
-          BODY_KEYS: "general prereg binsem"
+          BODY_KEYS: "general dxvk prereg proton"
         run: bash ./scripts/release.sh
 
   maintenance:

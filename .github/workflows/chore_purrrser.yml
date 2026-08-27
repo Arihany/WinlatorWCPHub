@@ -31,6 +31,8 @@ jobs:
       README_FILE: README.md
       PACK_FILE: pack.json
       CASKADE_FILE: pack-caskade.json
+      # pack.json is DLL-only, caskade ships both FEX layouts
+      FULL_FILE: content-full.json
 
     steps:
       - name: Checkout default branch
@@ -65,15 +67,18 @@ jobs:
       - name: Generate
         run: |
           chmod +x scripts/gen-pack.sh scripts/gen-caskade.sh
-          scripts/gen-pack.sh "${REPO}" "${PACK_FILE}"
+          scripts/gen-pack.sh "${REPO}" "${PACK_FILE}" "${FULL_FILE}"
           test -f "${PACK_FILE}"
+          test -f "${FULL_FILE}"
           echo "Generated ${PACK_FILE}:"
           head -n 50 "${PACK_FILE}" || true
 
-          scripts/gen-caskade.sh "${PACK_FILE}" "${CASKADE_FILE}"
+          scripts/gen-caskade.sh "${FULL_FILE}" "${CASKADE_FILE}"
           test -f "${CASKADE_FILE}"
           echo "Generated ${CASKADE_FILE}:"
           head -n 50 "${CASKADE_FILE}" || true
+
+          rm -f "${FULL_FILE}"
 
       - name: update readme
         id: readme

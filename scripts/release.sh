@@ -6,15 +6,13 @@ REPO="${REPO:-${GITHUB_REPOSITORY:?REPO or GITHUB_REPOSITORY must be set}}"
 ARTIFACT_GLOB="${ARTIFACT_GLOB:?ARTIFACT_GLOB not set}"
 VERSION_PREFIX="${VERSION_PREFIX:-}"
 
-REL_TAG_NIGHTLY="${REL_TAG_NIGHTLY:-}"
-UPSTREAM_REPO="${UPSTREAM_REPO:-}"
-REF="${REF:-}"
-
 NOTES="${NOTES:-RELEASE_NOTES.md}"
 BODY="${BODY:-}"
 BODY_KEYS="${BODY_KEYS:-}"
 
-if [[ -z "$BODY" && -n "$BODY_KEYS" ]]; then
+REL_SKIP_BODY="${REL_SKIP_BODY:-0}"
+
+if [[ "$REL_SKIP_BODY" != 1 && -z "$BODY" && -n "$BODY_KEYS" ]]; then
   source "$(dirname "$0")/release-notes.sh"
   IFS=' ' read -ra _note_keys <<<"$BODY_KEYS"
   BODY="$(render_notes "${_note_keys[@]}")"
@@ -39,30 +37,13 @@ if [[ -n "$VERSION_PREFIX" ]]; then
   ver="${ver#"$VERSION_PREFIX"}"
 fi
 ver="${ver%.wcp}"
-ver="${ver%-binsem}"
 
-line="- Current version: $ver"
+printf -- '- Current version: %s\n' "$ver" >>"$NOTES"
 
-if [[ -n "$REL_TAG_NIGHTLY" &&
-      "$REL_TAG" == "$REL_TAG_NIGHTLY" &&
-      -n "$UPSTREAM_REPO" &&
-      -n "$REF" ]]; then
-  short_sha="${REF:0:7}"
-  commit_link="https://github.com/${UPSTREAM_REPO}/commit/${REF}"
-
-  core="${ver%-*}"
-  if [[ "$ver" == *-* && "$core" == *-* ]]; then
-    datecode="${core##*-}"
-    base="${core%-*}"
-    line="- Current version: ${base}-${datecode}-[${short_sha}](${commit_link})"
-  else
-    line="- Current version: ${ver}-[${short_sha}](${commit_link})"
-  fi
-fi
-
-printf '%s\n' "$line" >>"$NOTES"
-
-if gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1; then
+if [[ "$REL_SKIP_BODY" == 1 ]]; then
+  gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1 \
+    || gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TAG" --notes ""
+elif gh release view "$REL_TAG" --repo "$REPO" >/dev/null 2>&1; then
   gh release edit "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"
 else
   gh release create "$REL_TAG" --repo "$REPO" -t "$REL_TAG" -F "$NOTES"

@@ -32,7 +32,6 @@ else
   warn "llvm-strip not found; skipping symbol stripping."
 fi
 
-# Args
 SRC_64="${1:?SRC_64 (64-bit / ARM64EC dir) is required}"
 SRC_32="${2:?SRC_32 (32-bit dir) is required}"
 WCP_DIR="${3:?WCP_DIR is required}"
@@ -67,7 +66,6 @@ if ! [[ "$FINAL_VER_CODE" =~ ^[0-9]+$ ]]; then
   FINAL_VER_CODE=0
 fi
 
-# Resolve Version Name
 WCP_VERSION_PREFIX="${WCP_VERSION_PREFIX:-}"
 WCP_VERSION_SUFFIX="${WCP_VERSION_SUFFIX:-}"
 
@@ -101,6 +99,59 @@ pack_wcp_archive() {
     --format=gnu --owner=0 --group=0 --numeric-owner "${TAR_SORT_OPT[@]}" \
     -cf "$out_file" "${contents[@]}"
 }
+
+if [[ "${WCP_LAYOUT:-}" == fex-proton* ]]; then
+  [[ "$SRC_32" == "-" ]] || die "FEX Proton layout does not accept a second source tree"
+
+  fex_required=(
+    wine/aarch64-windows/libarm64ecfex.dll
+    wine/aarch64-windows/libwow64fex.dll
+  )
+  case "$WCP_LAYOUT" in
+    fex-proton)
+      # Full Proton layout: also ships the Android UnixLib
+      fex_required+=(
+        wine/aarch64-unix/libarm64ecfex.so
+        wine/aarch64-unix/libwow64fex.so
+      )
+      ;;
+    fex-proton-dll)
+      # DLL only
+      ;;
+    *)
+      die "Unknown FEX layout: $WCP_LAYOUT"
+      ;;
+  esac
+  fex_required+=(build-manifest.json)
+
+  for required in "${fex_required[@]}"; do
+    [[ -f "$SRC_64/$required" ]] || die "Missing FEX package input: $required"
+  done
+
+  rm -rf "$WCP_DIR"
+  mkdir -p "$WCP_DIR"
+  cp -a "$SRC_64/wine" "$WCP_DIR/wine"
+  cp -- "$SRC_64/build-manifest.json" "$WCP_DIR/build-manifest.json"
+
+  jq -n \
+    --arg TYPE "$WCP_TYPE" \
+    --arg VER "$FINAL_VER_NAME" \
+    --argjson VC "$FINAL_VER_CODE" \
+    --arg DESC "$WCP_DESC" \
+    '{type: $TYPE, versionName: $VER, versionCode: $VC, description: $DESC,
+      files: [
+        {source: "wine/aarch64-windows/libarm64ecfex.dll", target: "${system32}/libarm64ecfex.dll"},
+        {source: "wine/aarch64-windows/libwow64fex.dll", target: "${system32}/libwow64fex.dll"}
+      ]}' > "$WCP_DIR/profile.json"
+
+  pack_wcp_archive "$WCP_DIR" "$OUT_PATH" profile.json build-manifest.json wine
+  if [[ "$WCP_LAYOUT" == "fex-proton" ]]; then
+    note "Packed Proton FEX layout with two Windows DLLs and two Android UnixLib SOs."
+  else
+    note "Packed Proton FEX layout with two Windows DLLs (DLL-only: no UnixLib in this release)."
+  fi
+  exit 0
+fi
 
 generate_file_list_json() {
   local dir="$1"

@@ -1,6 +1,6 @@
 set -Eeuo pipefail
 
-SRC="${1:-pack.json}"
+SRC="${1:-content-full.json}"
 OUT="${2:-pack-caskade.json}"
 
 command -v jq >/dev/null 2>&1 || { echo "Missing dependency: jq" >&2; exit 1; }
@@ -9,6 +9,7 @@ command -v jq >/dev/null 2>&1 || { echo "Missing dependency: jq" >&2; exit 1; }
 jq '
   [
     "fexcore",
+    "fexcore-unixlib",
     "dxvk-gplasync-arm64ec",
     "dxvk-gplasync",
     "vkd3d-proton",

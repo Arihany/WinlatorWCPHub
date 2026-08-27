@@ -1,11 +1,12 @@
 
 declare -A REL_NOTE=(
   [general]="- General-purpose x64/x86 build"
-  [fexonly]="- For FEX only"
+  [fexonly]="- For use with FEX only"
   [common]="- Common: Uses Valve-style build flags. Compatibility may be reduced."
-  [prereg]="- pre-reg: Last version before the performance drop on Turnip driver."
-  [binsem]="- binsem: Avoids Turnip performance loss without env vars. May be unstable."
-  [dyasync]="- Dyasync can be disabled by \`DXVK_DISABLE_DYASYNC=1\`"
+  [prereg]="- Pre-reg: Last version before the performance regression on the Turnip driver."
+  [dyasync]="- Dyasync: See upstream documentation for configuration variables."
+  [proton]="- Proton: Pinned build for Proton."
+  [dxvk]="- DXVK: Newer versions do not necessarily provide better performance. In particular, compatibility may be significantly reduced with version 2.7.x and later."
 )
 
 render_notes() {

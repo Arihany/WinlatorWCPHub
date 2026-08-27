@@ -1,5 +1,4 @@
 ARM64EC_CPU_FLAGS=("-march=armv8.2-a" "-mtune=cortex-x3")
-# Correctness guards.
 ARM64EC_SAFETY_FLAGS=("-fno-strict-aliasing" "-fwrapv")
 ARM64EC_MESON_FLAGS=("${ARM64EC_CPU_FLAGS[@]}" "-O2" "${ARM64EC_SAFETY_FLAGS[@]}")
 

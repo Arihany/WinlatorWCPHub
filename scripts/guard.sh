@@ -7,10 +7,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/build-targets.sh"
 : "${GITHUB_REPOSITORY:?GITHUB_REPOSITORY is not set}"
 : "${REL_TAG_STABLE:?REL_TAG_STABLE is not set}"
 
-REL_TAG_NIGHTLY="${REL_TAG_NIGHTLY:-}"
-IN_CHANNEL="${IN_CHANNEL:-stable}"
 IN_VERSION="${IN_VERSION:-}"
-IS_SCHEDULE="${IS_SCHEDULE:-false}"
 GITLAB_REPO="${GITLAB_REPO:-}"
 
 TMP_DIR="$(mktemp -d)"
@@ -49,67 +46,44 @@ ensure_base_tools
 
 echo "::group::Configuration"
 echo "UNI_KIND    : $UNI_KIND"
-echo "IN_CHANNEL  : $IN_CHANNEL"
-echo "IS_SCHEDULE : $IS_SCHEDULE"
+echo "REL_TAG     : $REL_TAG_STABLE"
+echo "IN_VERSION  : ${IN_VERSION:-<presets>}"
 echo "::endgroup::"
 
-declare -A ASSET_CACHE
+ASSET_CACHE=""
+ASSET_CACHE_READY=0
 
 get_assets_cached() {
-  local channel="$1"
-  local __outvar="${2:-}"
-  local tag_var="REL_TAG_${channel^^}"
-  local release_tag="${!tag_var:-}"
+  local __outvar="${1:-}"
 
-  if [[ -z "$release_tag" ]]; then
-    ASSET_CACHE[$channel]=""
-    [[ -n "$__outvar" ]] && printf -v "$__outvar" '%s' "" || true
-    return 0
-  fi
-
-  if [[ -v ASSET_CACHE[$channel] ]]; then
-    if [[ -n "$__outvar" ]]; then
-      printf -v "$__outvar" '%s' "${ASSET_CACHE[$channel]}"
-    else
-      printf '%s\n' "${ASSET_CACHE[$channel]}"
+  if (( ! ASSET_CACHE_READY )); then
+    local out err err_file
+    err_file="$TMP_DIR/gh_assets.err"
+    if ! out="$(gh release view "$REL_TAG_STABLE" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>"$err_file")"; then
+      err="$(<"$err_file" 2>/dev/null || true)"
+      if grep -qiE "release not found|HTTP 404|status 404|Not Found" <<<"$err"; then
+        echo "::notice::Release '$REL_TAG_STABLE' not found (treating as empty)." >&2
+        out=""
+      else
+        echo "::error::Failed to fetch assets for '$REL_TAG_STABLE'." >&2
+        [[ -n "$err" ]] && echo "$err" >&2
+        return 1
+      fi
     fi
-    return 0
+    ASSET_CACHE="$out"
+    ASSET_CACHE_READY=1
   fi
 
-  local out err err_file
-  err_file="$TMP_DIR/gh_assets_${channel}.err"
-  if ! out="$(gh release view "$release_tag" --repo "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' 2>"$err_file")"; then
-    err="$(<"$err_file" 2>/dev/null || true)"
-    if grep -qiE "release not found|could not resolve|404" <<<"$err"; then
-      echo "::notice::Release '$release_tag' not found (treating as empty)." >&2
-      out=""
-    else
-      echo "::warning::Failed to fetch assets for '$release_tag'." >&2
-      [[ -n "$err" ]] && echo "$err" >&2
-      out=""
-    fi
-  fi
-
-  ASSET_CACHE[$channel]="$out"
   if [[ -n "$__outvar" ]]; then
-    printf -v "$__outvar" '%s' "$out"
+    printf -v "$__outvar" '%s' "$ASSET_CACHE"
   else
-    printf '%s\n' "$out"
+    printf '%s\n' "$ASSET_CACHE"
   fi
 }
 
 fetch_github_tags() {
   gh api "repos/$UPSTREAM_REPO/tags?per_page=100" --paginate --jq '.[].name' 2>/dev/null || true
 }
-
-get_upstream_head_sha() {
-  local sha
-  sha="$(gh api "repos/$UPSTREAM_REPO/commits/HEAD" --jq .sha 2>/dev/null || true)"
-  [[ -z "$sha" ]] && { echo "::error::Failed to fetch HEAD SHA for $UPSTREAM_REPO" >&2; exit 1; }
-  echo "$sha"
-}
-
-get_datecode() { date -u +%y%m%d; }
 
 check_github_tag_exists() {
   local tag="$1"
@@ -133,11 +107,11 @@ check_github_tag_exists() {
 get_tag_regex_for_kind() {
   local kind="$1"
   case "$kind" in
-    fexcore)
-      printf '%s\t%s\n' '^FEX-[0-9]+' '^FEX-'
+    fexcore|fexcore-unixlib)
+      printf '%s\t%s\n' '^FEX-[0-9]+$' '^FEX-'
       ;;
     dxvk*|vkd3d*)
-      printf '%s\t%s\n' '^(v)?[0-9]' ''
+      printf '%s\t%s\n' '^v?[0-9]+(\.[0-9]+)*$' ''
       ;;
     *)
       return 1
@@ -187,7 +161,7 @@ fetch_gitlab_tags_all() {
 gplasync_patch_available() {
   local base="$1"
   local rev="$2"
-  local base_url="${GPLASYNC_BASE_URL:-https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches}"
+  local base_url="${GPLASYNC_BASE_URL:-https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/v${base}-${rev}/patches}"
   local patch_name="dxvk-gplasync-${base}-${rev}.patch"
 
   if curl -fsI "${base_url}/${patch_name}" >/dev/null 2>&1; then
@@ -219,34 +193,31 @@ find_latest_tag() {
 
 # Standard
 resolve_standard_strategy() {
-  local channel="$1" input_arg="$2"
+  local input_arg="$1"
   local strategy="$UNI_KIND"
   local ref ver_name filename short=""
-  local dc=""
-
-  if [[ "$channel" == "nightly" ]]; then
-    dc="$(get_datecode)"
-  fi
 
   case "$strategy" in
-    fexcore)
-      # FEX is stable-only (nightly dropped).
-      [[ "$channel" == "stable" ]] || { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
+    fexcore|fexcore-unixlib)
       [[ -z "$input_arg" ]] && return 1
       ref="$input_arg"
       ver_name="${input_arg#FEX-}"
-      filename="FEXCore-${ver_name}.wcp"
+      if fexcore_kind_has_unixlib "$strategy"; then
+        filename="FEXCore-unixlib-${ver_name}.wcp"
+      else
+        filename="FEXCore-${ver_name}.wcp"
+      fi
       ;;
 
     dxvk*|vkd3d*)
-      [[ "$channel" == "nightly" ]] && { echo "::error::Nightly not supported for $strategy" >&2; return 1; }
       [[ -z "$input_arg" ]] && return 1
-      
+
       ref="$input_arg"
       local base
       base="$(version_base_from_ref "$ref")"
 
-      local prefix="$strategy"
+      local prefix
+      prefix="$(artifact_prefix_for_kind "$strategy")"
       [[ "$prefix" != *- ]] && prefix="${prefix}-"
       
       ver_name="$base"
@@ -261,13 +232,12 @@ resolve_standard_strategy() {
   echo "${ref}|${ver_name}|${filename}|${short}"
 }
 
-# gplasync
 resolve_gplasync_strategy() {
   local prefix="$UNI_KIND"
   [[ "$prefix" != dxvk-gplasync* ]] && return 1
 
   local assets=""
-  get_assets_cached "stable" assets
+  get_assets_cached assets
 
   local existing_pairs_file="$TMP_DIR/exist_gplasync.txt"
   : > "$existing_pairs_file"
@@ -299,7 +269,7 @@ resolve_gplasync_strategy() {
     if is_gplasync_prereg_token "$req"; then
       local pre_reg_entry
       pre_reg_entry="$(pre_reg_queue_entry "$UNI_KIND" "$req")"
-      add_to_queue "stable" "$pre_reg_entry"
+      add_to_queue "$pre_reg_entry"
       continue
     elif is_latest_token "$req"; then
       tag_line="$(
@@ -347,12 +317,9 @@ resolve_gplasync_strategy() {
     if grep -Fq "${base} ${rev}" "$existing_pairs_file"; then
       echo "  -> Skipped (Already exists: ${base}-${rev})" >&2
     else
-      add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
+      add_to_queue "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}.wcp|"
     fi
 
-    if dxvk_binsem_kind_supported "$UNI_KIND" && dxvk_binsem_supported_base "$base"; then
-      add_to_queue "stable" "v${base}-${rev}|${base}-${rev}|${prefix}-${base}-${rev}-binsem.wcp|"
-    fi
   done < "$targets_file"
 }
 
@@ -360,24 +327,15 @@ QUEUE=""
 HAS_WORK=false
 
 add_to_queue() {
-  local channel="$1" raw_data="$2"
+  local raw_data="$1"
   IFS='|' read -r ref ver_name filename short <<< "$raw_data"
 
   local assets=""
-  get_assets_cached "$channel" assets
-  local rel_tag
-  [[ "$channel" == "stable" ]] && rel_tag="$REL_TAG_STABLE" || rel_tag="$REL_TAG_NIGHTLY"
+  get_assets_cached assets
 
-  if [[ -n "$assets" ]]; then
-    if grep -Fxq "$filename" <<< "$assets"; then
-      echo "  -> Skipped (Asset Exists: $filename)" >&2; return
-    fi
-    if [[ "$channel" == "nightly" && -n "$short" ]]; then
-       # Avoid rebuilding same SHA for nightly
-       if grep -Eq -- "\-${short}\.wcp$" <<< "$assets"; then
-          echo "  -> Skipped (SHA $short already built)" >&2; return
-       fi
-    fi
+  if [[ -n "$assets" ]] && grep -Fxq "$filename" <<< "$assets"; then
+    echo "  -> Skipped (Asset Exists: $filename)" >&2
+    return
   fi
 
   if grep -Fq "|$filename|" <<< "$QUEUE"; then
@@ -386,13 +344,13 @@ add_to_queue() {
   fi
 
   echo "  -> Queued: $filename" >&2
-  QUEUE+="${UNI_KIND}|${channel}|${ref}|${ver_name}|${rel_tag}|${filename}|${short}"$'\n'
+  QUEUE+="${UNI_KIND}|${ref}|${ver_name}|${REL_TAG_STABLE}|${filename}|${short}"$'\n'
   HAS_WORK=true
 }
 
 queue_stable_versions() {
   local csv="$1"
-  local raw ref res
+  local raw ref res proton_entry proton_rc
 
   IFS=',' read -ra _stable_reqs <<< "$csv"
   for raw in "${_stable_reqs[@]}"; do
@@ -400,8 +358,24 @@ queue_stable_versions() {
     [[ -z "$raw" ]] && continue
 
     if pre_reg_entry="$(pre_reg_queue_entry "$UNI_KIND" "$raw" 2>/dev/null)"; then
-      add_to_queue "stable" "$pre_reg_entry"
+      add_to_queue "$pre_reg_entry"
       continue
+    elif is_dxvk_proton_token "$raw" && [[ "$UNI_KIND" == dxvk || "$UNI_KIND" == dxvk-arm64ec ]]; then
+      # Resolve Valve's gitlink.. command substitution would lose the result.
+      # add_to_queue then detects changes by the short SHA in the filename
+      dxvk_proton_resolve || exit 1
+      dxvk_proton_selfcheck || exit 1
+      # rc 2 must fail the guard -- a skip is reported as "nothing to build".
+      proton_rc=0
+      proton_entry="$(proton_queue_entry "$UNI_KIND" "$raw")" || proton_rc=$?
+      (( proton_rc == 0 )) || exit 1
+      add_to_queue "$proton_entry"
+      continue
+    elif [[ "$UNI_KIND" == dxvk || "$UNI_KIND" == dxvk-arm64ec ]] \
+         && is_stale_dxvk_proton_token "$raw"; then
+      echo "::error::DXVK Proton token '$raw' pins a specific commit, which this line no longer supports." >&2
+      echo "::error::Use 'proton', or 'proton<major>' to assert the major." >&2
+      exit 1
     elif is_latest_token "$raw"; then
       ref="$(get_latest_stable)"
       [[ -n "$ref" ]] || { echo "::warning::No stable tag found for $UNI_KIND"; continue; }
@@ -410,23 +384,31 @@ queue_stable_versions() {
       check_github_tag_exists "$ref"
     fi
 
-    res="$(resolve_standard_strategy "stable" "$ref")"
-    [[ -n "$res" ]] && add_to_queue "stable" "$res"
+    if [[ "$UNI_KIND" == "dxvk-arm64ec" ]] && dxvk_version_is_x86_x64_only "$(version_base_from_ref "$ref")"; then
+      echo "::warning::DXVK $(version_base_from_ref "$ref") is an x86/x64-only target in WCPHub; skipping ARM64EC." >&2
+      continue
+    fi
 
-    if dxvk_binsem_kind_supported "$UNI_KIND"; then
-      local base prefix
-      base="$(version_base_from_ref "$ref")"
-      if dxvk_binsem_supported_base "$base"; then
-        prefix="$UNI_KIND"
-        [[ "$prefix" != *- ]] && prefix="${prefix}-"
-        add_to_queue "stable" "${ref}|${base}|${prefix}${base}-binsem.wcp|"
+    if [[ "$UNI_KIND" == dxvk-sarek-dyasync* ]]; then
+      local sarek_base
+      sarek_base="$(version_base_from_ref "$ref")"
+      if ! sarek_version_supported "$sarek_base"; then
+        echo "::warning::DXVK-Sarek $sarek_base is below the supported baseline $SAREK_MIN_VERSION; skipping." >&2
+        continue
       fi
     fi
+
+    if [[ "$UNI_KIND" == fexcore* ]] && ! fexcore_version_supported "$ref"; then
+      echo "::warning::FEX ${ref#FEX-} is below the supported baseline $FEXCORE_MIN_VERSION; skipping." >&2
+      continue
+    fi
+
+    res="$(resolve_standard_strategy "$ref")"
+    [[ -n "$res" ]] && add_to_queue "$res"
   done
 }
 
 dispatch_logic() {
-  # gplasync
   if [[ "$UNI_KIND" == dxvk-gplasync* ]]; then
     echo "::group::Strategy: GPLAsync ($UNI_KIND)"
     resolve_gplasync_strategy
@@ -434,53 +416,16 @@ dispatch_logic() {
     return
   fi
 
-  # Standard
-  local has_nightly=false
-  if [[ -n "${REL_TAG_NIGHTLY:-}" ]]; then
-    has_nightly=true
+  echo "::group::Strategy: Standard ($UNI_KIND / ${IN_VERSION:-presets})"
+
+  local requested_versions="${IN_VERSION:-}"
+  if [[ -z "$requested_versions" ]] && default_versions_for_kind "$UNI_KIND" >/dev/null 2>&1; then
+    requested_versions="$(default_versions_for_kind "$UNI_KIND")"
   fi
+  [[ -n "$requested_versions" ]] || requested_versions="latest"
 
-  # Auto / Schedule
-  if [[ "$IS_SCHEDULE" == "true" || "$IN_CHANNEL" == "auto" ]]; then
-    echo "::group::Strategy: Auto/Schedule ($UNI_KIND)"
-
-    local requested_versions=""
-    if default_versions_for_kind "$UNI_KIND" >/dev/null 2>&1; then
-      requested_versions="$(default_versions_for_kind "$UNI_KIND")"
-    else
-      requested_versions="latest"
-    fi
-
-    queue_stable_versions "$requested_versions"
-
-    # Nightly
-    if [[ "$has_nightly" == "true" ]]; then
-       local res_n; res_n="$(resolve_standard_strategy "nightly" "")"
-       [[ -n "$res_n" ]] && add_to_queue "nightly" "$res_n"
-    fi
-    echo "::endgroup::"
-
-  # Manual
-  else
-    echo "::group::Strategy: Manual ($IN_CHANNEL / $IN_VERSION)"
-    if [[ "$IN_CHANNEL" == "stable" ]]; then
-        local requested_versions="${IN_VERSION:-}"
-        if [[ -z "$requested_versions" ]] && default_versions_for_kind "$UNI_KIND" >/dev/null 2>&1; then
-          requested_versions="$(default_versions_for_kind "$UNI_KIND")"
-        fi
-
-        if [[ -z "$requested_versions" ]]; then
-          requested_versions="latest"
-        fi
-
-        queue_stable_versions "$requested_versions"
-    elif [[ "$IN_CHANNEL" == "nightly" ]]; then
-        [[ "$has_nightly" != "true" ]] && { echo "::error::Nightly not supported"; exit 1; }
-        local res; res="$(resolve_standard_strategy "nightly" "")"
-        [[ -n "$res" ]] && add_to_queue "nightly" "$res"
-    fi
-    echo "::endgroup::"
-  fi
+  queue_stable_versions "$requested_versions"
+  echo "::endgroup::"
 }
 
 dispatch_logic

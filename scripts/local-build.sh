@@ -12,6 +12,7 @@ Usage:
 
 Kinds:
   dxvk
+  dxvk-legacy
   dxvk-arm64ec
   dxvk-gplasync
   dxvk-gplasync-arm64ec
@@ -20,25 +21,40 @@ Kinds:
   vkd3d-proton
   vkd3d-proton-arm64ec
   fexcore
+  fexcore-unixlib
 
 Versions:
   Empty means the preset list plus latest stable.
-  DXVK presets:          2.4.1-pre-reg,2.4.1,2.5.3,2.6.2,2.7.1,3.0,latest
-  GPLAsync presets:      2.4.1-1-pre-reg,2.4.1,2.5.3,2.6.2,2.7.1,3.0,latest
-  Sarek presets:         1.12.0,latest
-  VKD3D presets:         2.14.1,3.0.1,latest
-  FEXCore presets:       2605,latest   (FEX tags; bare number or FEX-#### accepted)
-
-  DXVK, DXVK-ARM64EC, GPLAsync, and GPLAsync-ARM64EC builds also emit
-  -binsem artifacts for supported DXVK 2.7.1+ targets. Sarek is excluded.
+EOF
+  local _k _label
+  while read -r _k _label; do
+    printf '  %-22s %s\n' "$_label" "$(default_versions_for_kind "$_k")"
+  done <<'KINDS'
+dxvk DXVK-x86/x64:
+dxvk-legacy DXVK-legacy:
+dxvk-arm64ec DXVK-ARM64EC:
+dxvk-gplasync GPLAsync:
+dxvk-sarek-dyasync Sarek:
+vkd3d-proton VKD3D:
+fexcore FEXCore:
+fexcore-unixlib FEXCore-unixlib:
+KINDS
+  cat <<'EOF'
+  (FEX tags accept a bare number or FEX-####. Below FEX-2607 is not built.)
+  (fexcore = 2 PE DLLs; fexcore-unixlib = same DLLs plus 2 Android UnixLib SOs.)
+  (DXVK 'proton' follows Valve's current dxvk gitlink; 'proton<major>' also asserts the major.)
+  (dxvk-legacy builds the pre-1.9 releases with mingw-gcc; no clang release
+   compiles them. Its packages are named and released exactly like dxvk.)
 
 Examples:
   scripts/local-build.sh --setup --kind dxvk-arm64ec --versions 3.0
   scripts/local-build.sh --kind dxvk --versions 2.4.1-pre-reg
   scripts/local-build.sh --kind vkd3d-proton
   scripts/local-build.sh --kind dxvk-gplasync --versions 2.4.1-1-pre-reg,2.7.1,latest
-  scripts/local-build.sh --kind dxvk-sarek-dyasync --versions 1.12.0,latest
-  scripts/local-build.sh --kind fexcore --versions 2605,latest
+  scripts/local-build.sh --kind dxvk-sarek-dyasync --versions 1.13.0,latest
+  scripts/local-build.sh --kind dxvk-legacy --versions 1.5.5
+  scripts/local-build.sh --kind fexcore --versions 2608
+  scripts/local-build.sh --kind fexcore-unixlib --versions 2608
 EOF
 }
 
@@ -82,16 +98,20 @@ done
 [[ -n "$kind" ]] || { usage; die "--kind is required"; }
 
 case "$kind" in
-  dxvk|dxvk-arm64ec|dxvk-gplasync|dxvk-gplasync-arm64ec|dxvk-sarek-dyasync|dxvk-sarek-dyasync-arm64ec|vkd3d-proton|vkd3d-proton-arm64ec|fexcore)
+  dxvk|dxvk-legacy|dxvk-arm64ec|dxvk-gplasync|dxvk-gplasync-arm64ec|dxvk-sarek-dyasync|dxvk-sarek-dyasync-arm64ec|vkd3d-proton|vkd3d-proton-arm64ec|fexcore|fexcore-unixlib)
     ;;
   *)
     die "Unsupported kind: $kind"
     ;;
 esac
 
-# FEX uses the validated bylaws arm64ec toolchain, NOT mainline.
-FEX_LLVM_MINGW_REPO="bylaws/llvm-mingw"
-FEX_LLVM_MINGW_TAG="20250920"
+source "$ROOT/scripts/toolchain-lock.sh"
+export UNI_KIND="$kind"
+TOOLCHAIN_PROFILE="$(wcp_toolchain_profile_for_kind "$kind")"
+
+uses_rootcellar_toolchain() {
+  [[ "$kind" == *-arm64ec || "$kind" == fexcore* ]]
+}
 
 maybe_relocate_to_native() {
   [[ "${WCP_NATIVE_ACTIVE:-}" == 1 ]] && return 0
@@ -116,11 +136,7 @@ maybe_relocate_to_native() {
 
   if ! $do_setup && [[ ! -x "$work/.venv/bin/meson" ]]; then
     echo "::notice::Initializing native toolchain/venv in $work (one-time)..."
-    if [[ "$kind" == "fexcore" ]]; then
-      ( cd "$work" && LLVM_MINGW_REPO="$FEX_LLVM_MINGW_REPO" LLVM_MINGW_TAG="$FEX_LLVM_MINGW_TAG" bash scripts/setup-local-llvm-meson.sh )
-    else
-      ( cd "$work" && bash scripts/setup-local-llvm-meson.sh )
-    fi
+    (cd "$work" && WCP_TOOLCHAIN_PROFILE="$TOOLCHAIN_PROFILE" bash scripts/setup-local-llvm-meson.sh)
   fi
 
   local child_args=(--kind "$kind")
@@ -141,41 +157,98 @@ maybe_relocate_to_native() {
 }
 maybe_relocate_to_native
 
+# After relocation, so project-relative caches belong to the workspace that actually builds.
+# Environment overrides still win
+ROOTCELLAR_TOOLCHAIN_DIR="${ROOTCELLAR_TOOLCHAIN_DIR:-$(wcp_default_toolchain_dir "$ROOT" rootcellar)}"
+UPSTREAM_TOOLCHAIN_DIR="${UPSTREAM_TOOLCHAIN_DIR:-$(wcp_default_toolchain_dir "$ROOT" upstream)}"
+MINGW_GCC_TOOLCHAIN_DIR="${MINGW_GCC_TOOLCHAIN_DIR:-$(wcp_default_toolchain_dir "$ROOT" mingw-gcc)}"
+FEX_TOOLCHAIN_DIR="${FEX_TOOLCHAIN_DIR:-$ROOTCELLAR_TOOLCHAIN_DIR}"
+FEX_ANDROID_NDK_ROOT="${FEX_ANDROID_NDK_ROOT:-${ANDROID_NDK_ROOT:-$(wcp_default_android_ndk_dir "$ROOT")}}"
+FEX_TOOLCHAIN_MANIFEST_SHA256="${FEX_TOOLCHAIN_MANIFEST_SHA256:-$WCP_ROOTCELLAR_TOOLCHAIN_MANIFEST_SHA256}"
+ARM64EC_TOOLCHAIN_DIR="${ARM64EC_TOOLCHAIN_DIR:-$FEX_TOOLCHAIN_DIR}"
+ARM64EC_TOOLCHAIN_MANIFEST_SHA256="${ARM64EC_TOOLCHAIN_MANIFEST_SHA256:-$FEX_TOOLCHAIN_MANIFEST_SHA256}"
+export ROOTCELLAR_TOOLCHAIN_DIR UPSTREAM_TOOLCHAIN_DIR MINGW_GCC_TOOLCHAIN_DIR
+export FEX_TOOLCHAIN_DIR FEX_ANDROID_NDK_ROOT FEX_TOOLCHAIN_MANIFEST_SHA256
+export ARM64EC_TOOLCHAIN_DIR ARM64EC_TOOLCHAIN_MANIFEST_SHA256
+
 if $do_setup; then
   bash "$ROOT/scripts/install-deps-ubuntu.sh"
-  if [[ "$kind" == "fexcore" ]]; then
-    LLVM_MINGW_REPO="$FEX_LLVM_MINGW_REPO" LLVM_MINGW_TAG="$FEX_LLVM_MINGW_TAG" \
-      bash "$ROOT/scripts/setup-local-llvm-meson.sh"
-  else
-    bash "$ROOT/scripts/setup-local-llvm-meson.sh"
-  fi
+  WCP_TOOLCHAIN_PROFILE="$TOOLCHAIN_PROFILE" bash "$ROOT/scripts/setup-local-llvm-meson.sh"
 fi
 
 if [[ -d "$ROOT/.venv/bin" ]]; then
   export PATH="$ROOT/.venv/bin:$PATH"
 fi
 
-fex_toolchain_dir="$ROOT/.toolchains/llvm-mingw-${FEX_LLVM_MINGW_TAG}"
+if uses_rootcellar_toolchain; then
+  export TOOLCHAIN_DIR="$ARM64EC_TOOLCHAIN_DIR"
+elif [[ "$kind" == dxvk-legacy ]]; then
+  export TOOLCHAIN_DIR="$MINGW_GCC_TOOLCHAIN_DIR"
+else
+  export TOOLCHAIN_DIR="$UPSTREAM_TOOLCHAIN_DIR"
+fi
+[[ -d "$TOOLCHAIN_DIR/bin" ]] ||
+  die "Pinned $TOOLCHAIN_PROFILE toolchain is missing: $TOOLCHAIN_DIR (run with --setup)"
+export PATH="$TOOLCHAIN_DIR/bin:$PATH"
 
-if [[ -n "${TOOLCHAIN_DIR:-}" && -d "$TOOLCHAIN_DIR/bin" ]]; then
-  export PATH="$TOOLCHAIN_DIR/bin:$PATH"
-elif [[ "$kind" == "fexcore" && -d "$fex_toolchain_dir/bin" ]]; then
-  # FEX pins the bylaws toolchain.
-  export TOOLCHAIN_DIR="$fex_toolchain_dir"
-  export PATH="$fex_toolchain_dir/bin:$PATH"
-elif [[ -d "$ROOT/.toolchains" ]]; then
-  latest_toolchain="$(find "$ROOT/.toolchains" -maxdepth 1 -type d -name 'llvm-mingw-*' | sort -V | tail -n1 || true)"
-  if [[ -n "$latest_toolchain" && -d "$latest_toolchain/bin" ]]; then
-    export TOOLCHAIN_DIR="$latest_toolchain"
-    export PATH="$latest_toolchain/bin:$PATH"
-  fi
-elif [[ -d /opt/llvm-mingw/bin ]]; then
-  export TOOLCHAIN_DIR="/opt/llvm-mingw"
-  export PATH="/opt/llvm-mingw/bin:$PATH"
+if [[ "$kind" == fexcore* && "${TOOLCHAIN_DIR:-}" != "$FEX_TOOLCHAIN_DIR" ]]; then
+  die "FEX requires the selected Proton-lineage toolchain '$FEX_TOOLCHAIN_DIR', active toolchain is '${TOOLCHAIN_DIR:-<none>}'"
 fi
 
-if [[ "$kind" == "fexcore" && "${TOOLCHAIN_DIR:-}" != "$fex_toolchain_dir" ]]; then
-  echo "::warning::FEX should build with ${FEX_LLVM_MINGW_REPO}@${FEX_LLVM_MINGW_TAG}, but active toolchain is '${TOOLCHAIN_DIR:-<none>}'. Run: scripts/local-build.sh --setup --kind fexcore" >&2
+validate_arm64ec_toolchain() {
+  local manifest="$ARM64EC_TOOLCHAIN_DIR/rootcellar-toolchain-manifest.json"
+  local actual_sha256
+  local tool
+
+  command -v sha256sum >/dev/null 2>&1 || die "Missing command: sha256sum"
+  [[ -f "$manifest" ]] || die "Missing RootCellar toolchain manifest: $manifest"
+
+  actual_sha256="$(sha256sum "$manifest" | awk '{print $1}')"
+  [[ "$actual_sha256" == "$ARM64EC_TOOLCHAIN_MANIFEST_SHA256" ]] \
+    || die "ARM64EC toolchain manifest SHA-256 mismatch: expected $ARM64EC_TOOLCHAIN_MANIFEST_SHA256, got $actual_sha256"
+
+  for tool in \
+    arm64ec-w64-mingw32-gcc \
+    arm64ec-w64-mingw32-g++ \
+    arm64ec-w64-mingw32-ar \
+    arm64ec-w64-mingw32-windres \
+    i686-w64-mingw32-gcc \
+    i686-w64-mingw32-g++ \
+    i686-w64-mingw32-ar \
+    i686-w64-mingw32-windres \
+    llvm-readobj; do
+    [[ -x "$ARM64EC_TOOLCHAIN_DIR/bin/$tool" ]] \
+      || die "Missing $tool in RootCellar toolchain: $ARM64EC_TOOLCHAIN_DIR"
+  done
+
+  echo "::notice::Using RootCellar ARM64EC toolchain: $ARM64EC_TOOLCHAIN_DIR"
+}
+
+validate_mingw_gcc_toolchain() {
+  local driver version
+
+  for driver in x86_64-w64-mingw32-g++ i686-w64-mingw32-g++ \
+                x86_64-w64-mingw32-gcc i686-w64-mingw32-gcc; do
+    [[ -x "$TOOLCHAIN_DIR/bin/$driver" ]] \
+      || die "Missing $driver in mingw-gcc toolchain: $TOOLCHAIN_DIR (run with --setup)"
+  done
+
+  # Unpinned, these only compile under GCC.
+  for driver in x86_64-w64-mingw32-g++ i686-w64-mingw32-g++; do
+    version="$("$TOOLCHAIN_DIR/bin/$driver" --version 2>/dev/null | head -n1)"
+    [[ "$version" == *"(GCC)"* ]] \
+      || die "$driver is not GCC (got: ${version:-<none>}); dxvk-legacy refuses to fall back to another compiler"
+  done
+
+  MINGW_GCC_VERSION="$version"
+  export MINGW_GCC_VERSION
+  echo "::notice::Using mingw-gcc (unpinned by design): $MINGW_GCC_VERSION"
+}
+
+if [[ "$kind" == *-arm64ec ]]; then
+  validate_arm64ec_toolchain
+elif [[ "$kind" == dxvk-legacy ]]; then
+  validate_mingw_gcc_toolchain
 fi
 
 need_cmd git
@@ -184,9 +257,47 @@ need_cmd jq
 need_cmd meson
 need_cmd ninja
 
+# DXVK HUD string
+dxvk_hud_version() {
+  local profile_sh="$1" ver_name="$2"
+
+  (
+    WCP_VERSION_PREFIX=""
+    WCP_VERSION_SUFFIX=""
+    # shellcheck disable=SC1090
+    source "$profile_sh"
+    if declare -F wcp_version_name >/dev/null 2>&1; then
+      printf 'v%s\n' "$(wcp_version_name "$ver_name")"
+    else
+      printf 'v%s%s%s\n' "$WCP_VERSION_PREFIX" "$ver_name" "$WCP_VERSION_SUFFIX"
+    fi
+  )
+}
+
+dxvk_stamp_version() {
+  local version="$1"
+
+  if [[ -f version.h.in ]] && ! grep -q '@VCS_TAG@' version.h.in; then
+    sed -i "s/#define DXVK_VERSION \"[^\"]*\"/#define DXVK_VERSION \"${version}\"/" version.h.in
+    echo "::notice::DXVK version stamped in version.h.in: $version"
+    return 0
+  fi
+
+  # Drop --dirty
+  if [[ -f meson.build ]]; then
+    sed -i "s/\('git',[[:space:]]*'describe'\),[[:space:]]*'--dirty=[^']*'/\1/" meson.build
+  fi
+
+  git add -u
+  git diff-index --quiet HEAD -- || git commit -qm "WCPHub build stamp"
+  git tag --points-at HEAD | xargs -r git tag -d >/dev/null
+  git tag -f -a "$version" -m "$version" >/dev/null
+  echo "::notice::DXVK version stamped via git describe: $version"
+}
+
 repo_url_for_kind() {
   case "$1" in
-    dxvk|dxvk-arm64ec|dxvk-gplasync|dxvk-gplasync-arm64ec)
+    dxvk|dxvk-legacy|dxvk-arm64ec|dxvk-gplasync|dxvk-gplasync-arm64ec)
       printf '%s\n' "https://github.com/doitsujin/dxvk.git"
       ;;
     dxvk-sarek-dyasync|dxvk-sarek-dyasync-arm64ec)
@@ -195,7 +306,7 @@ repo_url_for_kind() {
     vkd3d-proton|vkd3d-proton-arm64ec)
       printf '%s\n' "https://github.com/HansKristian-Work/vkd3d-proton.git"
       ;;
-    fexcore)
+    fexcore|fexcore-unixlib)
       printf '%s\n' "https://github.com/FEX-Emu/FEX.git"
       ;;
   esac
@@ -203,7 +314,7 @@ repo_url_for_kind() {
 
 rel_tag_for_kind() {
   case "$1" in
-    dxvk) printf '%s\n' "DXVK" ;;
+    dxvk|dxvk-legacy) printf '%s\n' "DXVK" ;;
     dxvk-arm64ec) printf '%s\n' "DXVK-ARM64EC" ;;
     dxvk-gplasync) printf '%s\n' "DXVK-GPLASYNC" ;;
     dxvk-gplasync-arm64ec) printf '%s\n' "DXVK-GPLASYNC-ARM64EC" ;;
@@ -212,48 +323,25 @@ rel_tag_for_kind() {
     vkd3d-proton) printf '%s\n' "VKD3D-PROTON" ;;
     vkd3d-proton-arm64ec) printf '%s\n' "VKD3D-PROTON-ARM64EC" ;;
     fexcore) printf '%s\n' "FEXCore" ;;
+    fexcore-unixlib) printf '%s\n' "FEXCore-unixlib" ;;
   esac
 }
 
-is_binsem_artifact() {
-  [[ "$1" == *-binsem.wcp ]]
-}
-
 filter_queue() {
-  awk -F'|' -v only_binsem="${WCP_ONLY_BINSEM:-0}" '
-    !seen[$3]++ {
-      if (only_binsem == "1" && $3 !~ /-binsem\.wcp$/) next
-      print
-    }
-  '
+  awk -F'|' '!seen[$3]++'
 }
 
 profile_for_artifact() {
   local kind="$1"
-  local filename="$2"
-  local suffix=""
-
-  if is_binsem_artifact "$filename"; then
-    suffix="-binsem"
-  fi
-
-  printf '%s\n' "../scripts/profiles/${kind}${suffix}.sh"
-}
-
-apply_binsem_patch_if_needed() {
-  local filename="$1"
-
-  if is_binsem_artifact "$filename"; then
-    echo "Applying DXVK binary semaphore fallback patch..."
-    patch -p1 < ../scripts/patches/dxvk_binsem.patch
-  fi
+  # dxvk-legacy reuses the dxvk profile
+  printf '%s\n' "../scripts/profiles/$(artifact_prefix_for_kind "$kind").sh"
 }
 
 latest_github_tag() {
   local repo_url="$1"
   git ls-remote --tags --refs "$repo_url" 'refs/tags/v*' \
     | awk -F/ '{print $NF}' \
-    | grep -E '^v?[0-9]' \
+    | grep -E '^v?[0-9]+(\.[0-9]+)*$' \
     | sort -V \
     | tail -n1
 }
@@ -277,6 +365,11 @@ prepare_source() {
   fi
 
   git -C src fetch --tags --force
+
+  local stale
+  stale="$(git -C src tag -l | grep -E '^[0-9a-f]{40}(-|$)' || true)"
+  [[ -n "$stale" ]] && xargs -r git -C src tag -d <<<"$stale" >/dev/null
+  return 0
 }
 
 standard_queue() {
@@ -294,9 +387,13 @@ standard_queue() {
     req="$(echo "$raw" | xargs)"
     [[ -z "$req" ]] && continue
 
-    local pre_reg_entry
+    local pre_reg_entry proton_entry
     if pre_reg_entry="$(pre_reg_queue_entry "$kind" "$req" 2>/dev/null)"; then
       IFS='|' read -r ref base filename _short <<< "$pre_reg_entry"
+      printf '%s|%s|%s\n' "$ref" "$base" "$filename"
+      continue
+    elif proton_entry="$(proton_queue_entry "$kind" "$req")"; then
+      IFS='|' read -r ref base filename _short <<< "$proton_entry"
       printf '%s|%s|%s\n' "$ref" "$base" "$filename"
       continue
     elif is_latest_token "$req"; then
@@ -312,12 +409,25 @@ standard_queue() {
     fi
 
     base="$(version_base_from_ref "$ref")"
-    filename="${kind}-${base}.wcp"
-    printf '%s|%s|%s\n' "$ref" "$base" "$filename"
-
-    if dxvk_binsem_kind_supported "$kind" && dxvk_binsem_supported_base "$base"; then
-      printf '%s|%s|%s-binsem.wcp\n' "$ref" "$base" "${kind}-${base}"
+    if [[ "$kind" == "dxvk-arm64ec" ]] && dxvk_version_is_x86_x64_only "$base"; then
+      echo "::warning::DXVK $base is an x86/x64-only target in WCPHub; skipping ARM64EC." >&2
+      continue
     fi
+    if [[ "$kind" == dxvk-sarek-dyasync* ]] && ! sarek_version_supported "$base"; then
+      echo "::warning::DXVK-Sarek $base is below the supported baseline $SAREK_MIN_VERSION; skipping." >&2
+      continue
+    fi
+    # Compiler lines, not version ranges: keep each target on its own side.
+    if [[ "$kind" == dxvk-legacy ]] && ! dxvk_version_is_legacy "$base"; then
+      echo "::warning::DXVK $base is not a legacy target; build it with --kind dxvk." >&2
+      continue
+    fi
+    if [[ "$kind" == dxvk ]] && dxvk_version_is_legacy "$base"; then
+      echo "::warning::DXVK $base does not compile under clang; build it with --kind dxvk-legacy." >&2
+      continue
+    fi
+    filename="$(artifact_prefix_for_kind "$kind")-${base}.wcp"
+    printf '%s|%s|%s\n' "$ref" "$base" "$filename"
   done | filter_queue
 }
 
@@ -338,9 +448,8 @@ gitlab_tags_file() {
 download_gplasync_patch() {
   local base="$1"
   local rev="$2"
-  local dirty_suffix="$3"
   local patch_dir="$ROOT/patches"
-  local base_url="${GPLASYNC_BASE_URL:-https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/main/patches}"
+  local base_url="${GPLASYNC_BASE_URL:-https://gitlab.com/Ph42oN/dxvk-gplasync/-/raw/v${base}-${rev}/patches}"
   local patch_name="dxvk-gplasync-${base}-${rev}.patch"
   local patch_local="$patch_dir/$patch_name"
 
@@ -358,7 +467,6 @@ download_gplasync_patch() {
     fi
   fi
 
-  sed -i "s/--dirty=-[^']*gplasync'/--dirty=-${dirty_suffix}'/g" "$patch_local" || true
   printf '%s\n' "$patch_local"
 }
 
@@ -415,11 +523,94 @@ gplasync_queue() {
 
     filename="${kind}-${base}-${rev}.wcp"
     printf 'v%s-%s|%s-%s|%s|%s|%s\n' "$base" "$rev" "$base" "$rev" "$filename" "$base" "$rev"
-
-    if dxvk_binsem_kind_supported "$kind" && dxvk_binsem_supported_base "$base"; then
-      printf 'v%s-%s|%s-%s|%s-binsem.wcp|%s|%s\n' "$base" "$rev" "$base" "$rev" "${kind}-${base}-${rev}" "$base" "$rev"
-    fi
   done | filter_queue
+}
+
+prepare_dxvk_legacy_source() {
+  local ref="$1"
+  local inc="src/d3d11/d3d11_include.h"
+  local cross_cpp="'-include','cstdint','-include','utility','-include','algorithm','-include','cstring','-include','limits'"
+
+  # __MINGW64_VERSION_MAJOR guard
+  if [[ -f "$inc" ]] && grep -q 'typedef enum D3D11_FORMAT_SUPPORT2' "$inc"; then
+    echo "Removing unguarded D3D11_FORMAT_SUPPORT2 in $inc..."
+    perl -i -0777 -pe 's/^\s*typedef\s+enum\s+D3D11_FORMAT_SUPPORT2\s*\{.*?\}\s*D3D11_FORMAT_SUPPORT2\s*;//ms' "$inc"
+  fi
+
+  # meson stopped reading compiler flags from [properties] after 0.56
+  local f
+  for f in build-win64.txt build-win32.txt; do
+    [[ -f "$f" ]] || continue
+    sed -i '/^\[built-in options\]/,$d' "$f"
+    if [[ "$f" == build-win32.txt ]]; then
+      printf '\n[built-in options]\ncpp_args = [%s,%s]\nc_args = [%s]\n' \
+        "'-msse','-msse2'" "$cross_cpp" "'-msse','-msse2','-include','stdint.h'" >> "$f"
+    else
+      printf '\n[built-in options]\ncpp_args = [%s]\nc_args = [%s]\n' \
+        "$cross_cpp" "'-include','stdint.h'" >> "$f"
+    fi
+  done
+
+  echo "::notice::Prepared DXVK legacy source $ref for mingw-gcc."
+}
+
+# Validated before the queue is built
+dxvk_validate_proton_requests() {
+  local kind="$1"
+  local requested="${versions:-}"
+  local -a _preqs
+  local raw req
+
+  [[ "$kind" == dxvk || "$kind" == dxvk-arm64ec ]] || return 0
+  [[ -n "$requested" ]] || requested="$(default_versions_for_kind "$kind")"
+
+  IFS=',' read -ra _preqs <<< "$requested"
+  for raw in "${_preqs[@]}"; do
+    req="$(echo "$raw" | xargs)"
+    [[ -z "$req" ]] && continue
+
+    if is_dxvk_proton_token "$req"; then
+      dxvk_proton_resolve || die "Could not resolve the DXVK Proton line; refusing to build"
+      dxvk_proton_selfcheck || die "Resolved DXVK Proton line is inconsistent; refusing to build"
+
+      local _want
+      _want="$(dxvk_proton_requested_major "$req")"
+      [[ -z "$_want" || "$_want" == "$DXVK_PROTON_MAJOR" ]] \
+        || die "Requested proton${_want}, but $DXVK_PROTON_REPO now defaults to $DXVK_PROTON_BRANCH (proton${DXVK_PROTON_MAJOR}). Use 'proton' to follow the current line."
+    elif is_stale_dxvk_proton_token "$req"; then
+      die "DXVK Proton token '$req' pins a specific commit, which this line no longer supports. Use 'proton' (or 'proton<major>' to assert the major)."
+    fi
+  done
+}
+
+# Cross-checks
+verify_dxvk_proton_pin() {
+  local branch="proton-${DXVK_PROTON_MAJOR}"
+  local actual_base ahead
+
+  if [[ -f RELEASE ]]; then
+    actual_base="$(tr -d ' \t\r\n' < RELEASE)"
+  else
+    actual_base="$(sed -n "s/^project('dxvk'.*version[[:space:]]*:[[:space:]]*'\([^']*\)'.*/\1/p" meson.build | head -n1)"
+  fi
+
+  [[ "$actual_base" == "$DXVK_PROTON_BASE" ]] \
+    || die "Resolved Proton base '$DXVK_PROTON_BASE' but the checked-out tree reports '$actual_base' (ref $DXVK_PROTON_SHORT)"
+
+  if git rev-parse -q --verify "refs/remotes/origin/$branch" >/dev/null; then
+    git merge-base --is-ancestor "$DXVK_PROTON_REF" "refs/remotes/origin/$branch" \
+      || die "Resolved gitlink $DXVK_PROTON_SHORT is not contained in origin/$branch; the major derived from $DXVK_PROTON_BRANCH does not describe it"
+
+    # Not a bump signal: the rule follows Valve's gitlink, not this branch tip.
+    ahead="$(git rev-list --count "${DXVK_PROTON_REF}..refs/remotes/origin/$branch")"
+    if [[ "$ahead" != "0" ]]; then
+      echo "::notice::origin/$branch is $ahead commits ahead of the pin; check whether Valve moved the Proton gitlink." >&2
+    fi
+  else
+    echo "::warning::Branch origin/$branch not found; skipped the DXVK_PROTON_MAJOR containment check." >&2
+  fi
+
+  echo "::notice::DXVK Proton line verified against the tree: $DXVK_PROTON_BASE @ $DXVK_PROTON_SHORT on $branch"
 }
 
 build_standard() {
@@ -429,6 +620,8 @@ build_standard() {
   local arm64ec=false
 
   [[ "$kind" == *-arm64ec ]] && arm64ec=true
+
+  dxvk_validate_proton_requests "$kind"
 
   prepare_source "$repo_url"
   mapfile -t queue < <(standard_queue "$kind" "$repo_url")
@@ -441,43 +634,39 @@ build_standard() {
     [[ -n "$ref" ]] || continue
     echo "::group::Building $kind $ref"
 
-    git reset --hard
     git clean -fdx
     git checkout -f "$ref"
     git submodule sync --recursive
     git submodule update --init --recursive
 
+    if [[ "$ref" == "$DXVK_PROTON_REF" ]]; then
+      verify_dxvk_proton_pin
+    fi
+
     if [[ "$kind" == dxvk* ]]; then
-      bash ../scripts/patches/dxvk.sh .
-      apply_binsem_patch_if_needed "$filename"
-      if ! git diff-index --quiet HEAD --; then
-        git add -u
-        git commit -m "Apply local patches for $ref"
+      if [[ "$kind" == dxvk-legacy ]]; then
+        prepare_dxvk_legacy_source "$ref"
+      else
+        bash ../scripts/patches/dxvk.sh .
       fi
     fi
 
-    if $arm64ec; then
-      if [[ "$kind" == dxvk* ]]; then
-        local new_tag="${ref}-arm64ec"
-        is_binsem_artifact "$filename" && new_tag="${new_tag}-binsem"
-        git tag -a -f "$new_tag" -m "ARM64EC-Build"
-      fi
+    if [[ "$kind" == dxvk* ]]; then
+      dxvk_stamp_version "$(dxvk_hud_version "$(profile_for_artifact "$kind")" "$ver_name")"
+    fi
 
+    if $arm64ec; then
       UNI_KIND="$kind" REL_TAG_STABLE="$rel_tag" PROFILE_SH="$(profile_for_artifact "$kind" "$filename")" \
       bash ../scripts/guts-arm64ec.sh "$ref" "$ver_name" "$filename"
     else
       local pkg_root="../pkg_temp"
-      rm -rf "${pkg_root}/${kind}-${ref}"
+      local pkg_name="$(artifact_prefix_for_kind "$kind")-${ref}"
+      rm -rf "${pkg_root}/${pkg_name}"
       mkdir -p "$pkg_root"
-
-      if [[ "$kind" == dxvk ]]; then
-        git tag -d "$ref" 2>/dev/null || true
-        git tag -a -f "$ref" -m "Clean Build"
-      fi
 
       ./package-release.sh "$ref" "$pkg_root" --no-package
 
-      local src_root="${pkg_root}/${kind}-${ref}"
+      local src_root="${pkg_root}/${pkg_name}"
       bash ../scripts/pack-release-tree.sh \
         "$src_root" \
         "../${rel_tag}_WCP" \
@@ -495,12 +684,8 @@ build_gplasync() {
   local repo_url="$2"
   local rel_tag="$3"
   local arm64ec=false
-  local dirty_suffix="gplasync"
 
-  [[ "$kind" == *-arm64ec ]] && {
-    arm64ec=true
-    dirty_suffix="gplasync-arm64ec"
-  }
+  [[ "$kind" == *-arm64ec ]] && arm64ec=true
 
   prepare_source "$repo_url"
   mapfile -t queue < <(gplasync_queue)
@@ -513,23 +698,16 @@ build_gplasync() {
     [[ -n "$gpl_tag" ]] || continue
     local dxvk_ref="v${base}"
     local patch_local
-    local artifact_dirty_suffix="$dirty_suffix"
-
-    if is_binsem_artifact "$filename"; then
-      artifact_dirty_suffix="${artifact_dirty_suffix}-binsem"
-    fi
 
     if [[ "$ver_name" == *-pre-reg ]]; then
       dxvk_ref="$DXVK_PRE_REG_REF"
       if [[ -f "$ROOT/scripts/patches/dxvk-gplasync-2.4.1-1-pre-reg.patch" ]]; then
-        patch_local="$ROOT/patches/dxvk-gplasync-2.4.1-1-pre-reg-${artifact_dirty_suffix}.patch"
-        cp "$ROOT/scripts/patches/dxvk-gplasync-2.4.1-1-pre-reg.patch" "$patch_local"
-        sed -i "s/--dirty=-[^']*gplasync'/--dirty=-${artifact_dirty_suffix}'/g" "$patch_local" || true
+        patch_local="$ROOT/scripts/patches/dxvk-gplasync-2.4.1-1-pre-reg.patch"
       else
         patch_local=""
       fi
     else
-      patch_local="$(download_gplasync_patch "$base" "$rev" "$artifact_dirty_suffix" || true)"
+      patch_local="$(download_gplasync_patch "$base" "$rev" || true)"
     fi
     if [[ -z "$patch_local" ]]; then
       echo "::warning::GPLAsync patch not found for ${base}-${rev}; skipping." >&2
@@ -538,7 +716,6 @@ build_gplasync() {
 
     echo "::group::Building $kind $gpl_tag"
 
-    git reset --hard
     git clean -fdx
     git checkout -f "$dxvk_ref"
     git submodule sync --recursive
@@ -546,7 +723,8 @@ build_gplasync() {
 
     bash ../scripts/patches/dxvk.sh .
     patch -p1 < "$patch_local"
-    apply_binsem_patch_if_needed "$filename"
+
+    dxvk_stamp_version "$(dxvk_hud_version "$(profile_for_artifact "$kind")" "$ver_name")"
 
     if $arm64ec; then
       UNI_KIND="$kind" REL_TAG_STABLE="$rel_tag" PROFILE_SH="$(profile_for_artifact "$kind" "$filename")" \
@@ -577,14 +755,13 @@ build_sarek() {
   local repo_url="$2"
   local rel_tag="$3"
   local arm64ec=false
-  local ver_suffix="dyasync"
 
-  [[ "$kind" == *-arm64ec ]] && {
-    arm64ec=true
-    ver_suffix="dyasync-arm64ec"
-  }
+  [[ "$kind" == *-arm64ec ]] && arm64ec=true
 
   prepare_source "$repo_url"
+  need_cmd make
+  local upstream_branch="${UPSTREAM_BRANCH:-main}"
+  git -C src fetch origin "$upstream_branch" --force
   mapfile -t queue < <(standard_queue "$kind" "$repo_url")
   [[ "${#queue[@]}" -gt 0 ]] || die "Nothing to build."
 
@@ -595,30 +772,33 @@ build_sarek() {
     [[ -n "$ref" ]] || continue
     echo "::group::Building $kind $ref"
 
-    git reset --hard
+    local tag_sha
+    tag_sha="$(git rev-parse "$ref^{commit}")"
+    git merge-base --is-ancestor "$tag_sha" "origin/$upstream_branch" \
+      || die "DXVK-Sarek ref '$ref' is not contained in origin/$upstream_branch"
+
     git clean -fdx
-    git checkout -f "$ref"
+    git checkout -f "$tag_sha"
     git submodule sync --recursive
     git submodule update --init --recursive
+    [[ -f Makefile ]] || die "DXVK-Sarek $ref does not provide the 1.13.0+ Makefile build contract"
 
     bash ../scripts/patches/dxvk.sh .
 
     if [[ -f meson_options.txt ]]; then
       sed -i "/option('enable_ddraw'/s/value : true/value : false/" meson_options.txt
     fi
-    sed -i 's/#define DXVK_VERSION "[^"]*"/#define DXVK_VERSION "'"${ref}-${ver_suffix}"'"/' version.h.in
+    dxvk_stamp_version "$(dxvk_hud_version "$(profile_for_artifact "$kind")" "$ver_name")"
 
     if $arm64ec; then
       UNI_KIND="$kind" REL_TAG_STABLE="$rel_tag" \
       bash ../scripts/guts-arm64ec.sh "$ref" "$ver_name" "$filename"
     else
-      local pkg_root="../pkg_temp"
-      rm -rf "$pkg_root"
-      mkdir -p "$pkg_root"
+      local src_root="build"
+      make
 
-      ./package-release.sh "$ref" "$pkg_root" --no-package
-
-      local src_root="${pkg_root}/dxvk-${ref}"
+      [[ -d "$src_root/x64" && -d "$src_root/x32" ]] \
+        || die "DXVK-Sarek $ref did not produce x64/x32 release trees under $src_root"
       bash ../scripts/pack-release-tree.sh \
         "$src_root" \
         "../${rel_tag}_WCP" \
@@ -635,7 +815,7 @@ fexcore_latest_tag() {
   local repo_url="$1"
   git ls-remote --tags --refs "$repo_url" 'refs/tags/FEX-*' \
     | awk -F/ '{print $NF}' \
-    | grep -E '^FEX-[0-9]' \
+    | grep -E '^FEX-[0-9]+$' \
     | sort -V \
     | tail -n1
 }
@@ -663,8 +843,17 @@ fexcore_queue() {
       continue
     fi
 
+    if ! fexcore_version_supported "$ref"; then
+      echo "::warning::FEX ${ref#FEX-} is below the supported baseline $FEXCORE_MIN_VERSION; skipping." >&2
+      continue
+    fi
+
     base="${ref#FEX-}"
-    filename="FEXCore-${base}.wcp"
+    if fexcore_kind_has_unixlib "$kind"; then
+      filename="FEXCore-unixlib-${base}.wcp"
+    else
+      filename="FEXCore-${base}.wcp"
+    fi
     printf '%s|%s|%s\n' "$ref" "$base" "$filename"
   done | awk -F'|' '!seen[$3]++'
 }
@@ -675,7 +864,27 @@ build_fexcore() {
   local rel_tag="$3"
 
   need_cmd cmake
+  need_cmd sha256sum
   source "$ROOT/scripts/arm64ec-common.sh"
+
+  local toolchain_manifest="$FEX_TOOLCHAIN_DIR/rootcellar-toolchain-manifest.json"
+  local toolchain_manifest_sha256
+
+  [[ -f "$toolchain_manifest" ]] \
+    || die "Missing Proton-lineage toolchain manifest: $toolchain_manifest"
+  toolchain_manifest_sha256="$(sha256sum "$toolchain_manifest" | awk '{print $1}')"
+  [[ "$toolchain_manifest_sha256" == "$FEX_TOOLCHAIN_MANIFEST_SHA256" ]] \
+    || die "FEX toolchain manifest SHA-256 mismatch: expected $FEX_TOOLCHAIN_MANIFEST_SHA256, got $toolchain_manifest_sha256"
+
+  [[ -x "$TOOLCHAIN_DIR/bin/arm64ec-w64-mingw32-clang++" ]] \
+    || die "Missing ARM64EC compiler in $TOOLCHAIN_DIR"
+  [[ -x "$TOOLCHAIN_DIR/bin/aarch64-w64-mingw32-clang++" ]] \
+    || die "Missing AArch64 MinGW compiler in $TOOLCHAIN_DIR"
+  # The NDK only feeds the UnixLib so, a DLL-only build must not require it
+  if fexcore_kind_has_unixlib "$kind"; then
+    [[ -f "$FEX_ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" ]] \
+      || die "Android NDK toolchain not found: $FEX_ANDROID_NDK_ROOT"
+  fi
 
   prepare_source "$repo_url"
   mapfile -t queue < <(fexcore_queue "$kind" "$repo_url")
@@ -693,14 +902,19 @@ build_fexcore() {
     mkdir -p "$bdir"
     ( cd "$bdir"
       cmake -GNinja -Wno-dev \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DCMAKE_TOOLCHAIN_FILE=../Data/CMake/toolchain_mingw.cmake \
         -DCMAKE_C_FLAGS="${arch_flags}" \
         -DCMAKE_CXX_FLAGS="${arch_flags}" \
         -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-windows \
         -DENABLE_JEMALLOC_GLIBC_ALLOC=False \
+        -DENABLE_FEXCORE_PROFILER=True \
         -DENABLE_LTO=False \
         -DTUNE_CPU=none \
+        -DRANGES_NATIVE=OFF \
+        -DOVERRIDE_VERSION="${ref}" \
+        -DOVERRIDE_HASH="$(git -C "$ROOT/src" rev-parse --short=7 HEAD)" \
         -DMINGW_TRIPLE="${triple}-w64-mingw32" \
         -DBUILD_TESTING=False \
         -DCMAKE_INSTALL_PREFIX=/usr ..
@@ -709,36 +923,146 @@ build_fexcore() {
     )
   }
 
+  fex_build_unixlib() {
+    local dest="$1"
+    local bdir="src/build-android-aarch64-unixlib"
+    rm -rf "$bdir"
+    cmake -S src/Source/Windows/UnixLib -B "$bdir" -GNinja -Wno-dev \
+      -DCMAKE_TOOLCHAIN_FILE="$FEX_ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake" \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+      -DCMAKE_CXX_FLAGS="${arch_flags} -include $ROOT/scripts/fex-android-shm-compat.h -g0 -ffile-prefix-map=$ROOT=/usr/src/wcphub -fdebug-prefix-map=$ROOT=/usr/src/wcphub" \
+      -DCMAKE_INSTALL_PREFIX=/usr \
+      -DCMAKE_INSTALL_LIBDIR=/usr/lib/wine/aarch64-unix \
+      -DCMAKE_SHARED_LINKER_FLAGS="-Wl,-z,max-page-size=16384" \
+      -DANDROID_ABI=arm64-v8a \
+      -DANDROID_PLATFORM=android-35 \
+      -DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON \
+      -DENABLE_FEXCORE_PROFILER=True \
+      -DENABLE_LTO=False \
+      -DBUILD_TESTING=False \
+      -DTUNE_CPU=none \
+      -DRANGES_NATIVE=OFF \
+      -DOVERRIDE_VERSION="${ref}" \
+      -DOVERRIDE_HASH="$(git -C "$ROOT/src" rev-parse --short=7 HEAD)"
+    ninja -C "$bdir"
+    DESTDIR="$dest" ninja -C "$bdir" install
+  }
+
   while IFS='|' read -r ref ver_name filename; do
     [[ -n "$ref" ]] || continue
-    echo "::group::Building $kind $ref"
+
+    # The kinds differ only in whether the UnixLib soo are built and packed
+    # profile.json is identical for both.
+    local with_unixlib=false
+    if fexcore_kind_has_unixlib "$kind"; then
+      with_unixlib=true
+      echo "::group::Building $kind $ref (2 PE DLLs + 2 Android UnixLib SOs)"
+    else
+      echo "::group::Building $kind $ref (2 PE DLLs, DLL-only)"
+    fi
 
     ( cd src
-      git reset --hard
       git clean -fdx
       git checkout -f "$ref"
       git submodule sync --recursive
       git submodule update --init --recursive
+      if [[ "$with_unixlib" == true ]]; then
+        git apply "$ROOT/scripts/patches/fex-android-unixlib.patch"
+      fi
     )
 
-    rm -rf stage-ec stage-wo stage-wcp
-    mkdir -p stage-wcp
+    rm -rf stage-ec stage-wo stage-unix stage-wcp
+    mkdir -p stage-wcp/wine/aarch64-windows
 
     fex_build_arch "arm64ec" "$ROOT/stage-ec"
     fex_build_arch "aarch64" "$ROOT/stage-wo"
 
-    # FEX layout: all arm64ec + aarch64 DLLs live together under system32.
-    for st in stage-ec stage-wo; do
-      [[ -d "$st" ]] && find "$st" -type f -name '*.dll' -exec cp {} stage-wcp/ \;
-    done
-    find stage-wcp -maxdepth 1 -type f -name '*.dll' | grep -q . \
-      || die "No DLLs produced for $kind $ref"
+    cp "$ROOT/stage-ec/usr/lib/wine/aarch64-windows/libarm64ecfex.dll" \
+      "$ROOT/stage-wcp/wine/aarch64-windows/"
+    cp "$ROOT/stage-wo/usr/lib/wine/aarch64-windows/libwow64fex.dll" \
+      "$ROOT/stage-wcp/wine/aarch64-windows/"
+
+    local guard_dirs=("$ROOT/src/build-arm64ec" "$ROOT/src/build-aarch64")
+
+    if $with_unixlib; then
+      mkdir -p stage-wcp/wine/aarch64-unix
+      fex_build_unixlib "$ROOT/stage-unix"
+
+      local ndk_strip
+      ndk_strip="$FEX_ANDROID_NDK_ROOT/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-strip"
+      [[ -x "$ndk_strip" ]] || die "Android NDK llvm-strip not found: $ndk_strip"
+      "$ndk_strip" --strip-unneeded \
+        "$ROOT/stage-unix/usr/lib/wine/aarch64-unix/libarm64ecfex.so" \
+        "$ROOT/stage-unix/usr/lib/wine/aarch64-unix/libwow64fex.so"
+
+      cp "$ROOT/stage-unix/usr/lib/wine/aarch64-unix/libarm64ecfex.so" \
+        "$ROOT/stage-wcp/wine/aarch64-unix/"
+      cp "$ROOT/stage-unix/usr/lib/wine/aarch64-unix/libwow64fex.so" \
+        "$ROOT/stage-wcp/wine/aarch64-unix/"
+
+      guard_dirs+=("$ROOT/src/build-android-aarch64-unixlib")
+    fi
+
+    FEX_EXPECT_UNIXLIB="$($with_unixlib && echo 1 || echo 0)" \
+    bash "$ROOT/scripts/fex-artifact-guard.sh" \
+      "$ROOT/stage-wcp" \
+      "${guard_dirs[@]}"
+
+    local source_commit submodules_json files_json toolchain_version ndk_revision shim_sha256 patch_sha256
+    source_commit="$(git -C "$ROOT/src" rev-parse HEAD)"
+    submodules_json="$(git -C "$ROOT/src" submodule status --recursive | jq -Rsc '
+      split("\n") | map(select(length > 0)) |
+      map(capture("^[ +\\-U]?(?<commit>[0-9a-f]+) (?<path>[^ ]+)") | {path, commit})')"
+    files_json="$(find "$ROOT/stage-wcp/wine" -type f -print0 | LC_ALL=C sort -z |
+      while IFS= read -r -d '' artifact; do
+        jq -n --arg path "${artifact#"$ROOT/stage-wcp/"}" \
+          --arg sha256 "$(sha256sum "$artifact" | awk '{print $1}')" \
+          --argjson size "$(stat -c %s "$artifact")" '{path: $path, size: $size, sha256: $sha256}'
+      done | jq -sc '.')"
+    toolchain_version="$("$TOOLCHAIN_DIR/bin/clang" --version | head -n1)"
+    if $with_unixlib; then
+      ndk_revision="$(sed -n 's/^Pkg\.Revision = //p' "$FEX_ANDROID_NDK_ROOT/source.properties" | tr -d '\r')"
+      [[ -n "$ndk_revision" ]] || die "Could not resolve Android NDK revision"
+      shim_sha256="$(sha256sum "$ROOT/scripts/fex-android-shm-compat.h" | awk '{print $1}')"
+      patch_sha256="$(sha256sum "$ROOT/scripts/patches/fex-android-unixlib.patch" | awk '{print $1}')"
+    else
+      ndk_revision=""
+      shim_sha256=""
+      patch_sha256=""
+    fi
+
+    jq -n \
+      --arg version "$ver_name" \
+      --arg ref "$ref" \
+      --arg commit "$source_commit" \
+      --arg toolchainId "$WCP_ROOTCELLAR_TOOLCHAIN_ID" \
+      --arg toolchainVersion "$toolchain_version" \
+      --arg toolchainManifestSha256 "$toolchain_manifest_sha256" \
+      --arg archFlags "$arch_flags" \
+      --arg ndkRevision "$ndk_revision" \
+      --arg shimSha256 "$shim_sha256" \
+      --arg patchSha256 "$patch_sha256" \
+      --argjson unixLib "$with_unixlib" \
+      --argjson submodules "$submodules_json" \
+      --argjson files "$files_json" \
+      '{schemaVersion: 1, version: $version, source: {ref: $ref, commit: $commit, submodules: $submodules},
+        toolchain: {id: $toolchainId, family: "proton-llvm-mingw", version: $toolchainVersion,
+          manifestSha256: $toolchainManifestSha256},
+        android: (if $unixLib then
+            {unixLib: true, ndkRevision: $ndkRevision, abi: "arm64-v8a", api: 35,
+             maxPageSize: 16384, shmCompatibility: "memfd-owner",
+             shimSha256: $shimSha256, unixLibPatchSha256: $patchSha256}
+          else {unixLib: false} end),
+        cmake: {buildType: "Release", enableFEXCoreProfiler: true, enableLTO: false,
+          buildTesting: false, tuneCPU: "none", rangesNative: false, archFlags: $archFlags}, files: $files}' \
+      > "$ROOT/stage-wcp/build-manifest.json"
 
     PROFILE_SH="$ROOT/scripts/profiles/${kind}.sh" \
     bash "$ROOT/scripts/packing.sh" \
       "$ROOT/stage-wcp" \
       "-" \
-      "$ROOT/pkg_temp/fexcore" \
+      "$ROOT/pkg_temp/${kind}" \
       "$ver_name" \
       "$ROOT/out/${filename}"
 
@@ -756,7 +1080,7 @@ case "$kind" in
   dxvk-sarek-dyasync|dxvk-sarek-dyasync-arm64ec)
     build_sarek "$kind" "$repo_url" "$rel_tag"
     ;;
-  fexcore)
+  fexcore|fexcore-unixlib)
     build_fexcore "$kind" "$repo_url" "$rel_tag"
     ;;
   *)
