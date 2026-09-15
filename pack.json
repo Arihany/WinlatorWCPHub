@@ -223,6 +223,12 @@
   },
   {
     "type": "DXVK",
+    "verName": "3.1.1",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-3.1.1.wcp"
+  },
+  {
+    "type": "DXVK",
     "verName": "3.1.1-arm64ec",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-ARM64EC/dxvk-arm64ec-3.1.1.wcp"
