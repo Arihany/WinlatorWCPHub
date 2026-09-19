@@ -84,6 +84,12 @@
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-3.0-1.wcp"
   },
   {
+    "type": "DXVK",
+    "verName": "3.1.1-1-gplasync-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-GPLASYNC-ARM64EC/dxvk-gplasync-arm64ec-3.1.1-1.wcp"
+  },
+  {
     "type": "FEXCore",
     "verName": "2607",
     "verCode": "0",
