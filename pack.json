@@ -37,6 +37,12 @@
   },
   {
     "type": "DXVK",
+    "verName": "1.14.0-dyasync-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK-SAREK-ASYNC-ARM64EC/dxvk-sarek-dyasync-arm64ec-1.14.0.wcp"
+  },
+  {
+    "type": "DXVK",
     "verName": "1.5.5",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-1.5.5.wcp"
