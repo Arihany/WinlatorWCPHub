@@ -62,7 +62,8 @@ jobs:
     name: Build & Pack
     needs: guard
     if: needs.guard.outputs.missing == 'true'
-    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-latest' }}
+    # Proton LLVM requires libxml2.so.2, provided by Ubuntu 24.04.
+    runs-on: ${{ inputs.host == true && 'self-hosted' || 'ubuntu-24.04' }}
     timeout-minutes: 120
     steps:
 
