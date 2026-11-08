@@ -1,5 +1,8 @@
 set -Eeuo pipefail
 
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/toolchain-lock.sh"
+
 SUDO=""
 if command -v sudo >/dev/null 2>&1; then
   SUDO="sudo"
@@ -35,6 +38,11 @@ case "$kind" in
     exit 1
     ;;
 esac
+
+# Proton LLVM links against the host libxml2.so.2 through libLLVM.
+if [[ "$(wcp_toolchain_profile_for_kind "$kind")" == rootcellar ]]; then
+  packages+=(libxml2)
+fi
 
 $SUDO apt-get -yqq update
 $SUDO apt-get -yqq install --no-install-recommends "${packages[@]}"
