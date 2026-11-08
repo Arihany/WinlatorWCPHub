@@ -328,5 +328,11 @@
     "verName": "3.1",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON/vkd3d-proton-3.1.wcp"
+  },
+  {
+    "type": "VKD3D",
+    "verName": "3.1-arm64ec",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/VKD3D-PROTON-ARM64EC/vkd3d-proton-arm64ec-3.1.wcp"
   }
 ]
