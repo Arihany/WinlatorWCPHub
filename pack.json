@@ -211,6 +211,12 @@
   },
   {
     "type": "DXVK",
+    "verName": "2.7.1-proton11-4ea31ab",
+    "verCode": "0",
+    "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.7.1-proton11-4ea31ab.wcp"
+  },
+  {
+    "type": "DXVK",
     "verName": "2.7.1-proton11-a676404",
     "verCode": "0",
     "remoteUrl": "https://github.com/Arihany/WinlatorWCPHub/releases/download/DXVK/dxvk-2.7.1-proton11-a676404.wcp"
